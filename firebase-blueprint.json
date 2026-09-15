@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "A secure offline-first journal entry synced to the cloud.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "title": { "type": "string" },
+        "transcript": { "type": "string" },
+        "audioDuration": { "type": "number" },
+        "audioUrl": { "type": "string" },
+        "fileSize": { "type": "number" },
+        "moodScore": { "type": "number" },
+        "moodLabel": { "type": "string" },
+        "emotionLabel": { "type": "string" },
+        "insightsSummary": { "type": "string" },
+        "aiProcessingStatus": { "type": "string" },
+        "categories": { "type": "array" },
+        "tags": { "type": "array" },
+        "location": { "type": "string" },
+        "favorite": { "type": "boolean" },
+        "archived": { "type": "boolean" },
+        "deleted": { "type": "boolean" },
+        "pinned": { "type": "boolean" },
+        "wordCount": { "type": "number" },
+        "language": { "type": "string" },
+        "syncStatus": { "type": "string" },
+        "encryptionStatus": { "type": "string" },
+        "versionNumber": { "type": "number" },
+        "metadata": { "type": "object" },
+        "folderId": { "type": "string" }
+      },
+      "required": ["id", "userId", "createdAt", "transcript"]
+    },
+    "SyncQueueItem": {
+      "title": "SyncQueueItem",
+      "description": "An offline sync queue item.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "entryId": { "type": "string" },
+        "action": { "type": "string" },
+        "payload": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "attempts": { "type": "number" }
+      },
+      "required": ["id", "entryId", "action", "payload", "createdAt", "attempts"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/journal_entries/{id}": {
+      "schema": "JournalEntry",
+      "description": "User journal entries"
+    },
+    "users/{userId}/sync_queue/{id}": {
+      "schema": "SyncQueueItem",
+      "description": "User offline sync queue"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the owner is requesting their own data
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Match rules for user nested collections
+    match /users/{userId}/journal_entries/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/sync_queue/{id} {
+      allow read, write: if isOwner(userId);
+    }
+  }
+}

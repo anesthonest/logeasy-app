@@ -1,0 +1,6 @@
+{
+  "name": "LogEasy",
+  "description": "An offline-first, AI-powered voice journaling platform to capture spoken thoughts, track moods, and map life insights safely.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
