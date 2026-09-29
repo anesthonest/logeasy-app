@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, SlidersHorizontal, Star, Pin, Calendar, Volume2, Save, X, Bookmark } from 'lucide-react';
-import { SearchFilter, SavedSearch } from './VoiceJournalTypes';
+import { Search, SlidersHorizontal, Star, Pin, Calendar, Volume2, Save, X, Bookmark, Tag as TagIcon } from 'lucide-react';
+import { SearchFilter, SavedSearch, ColorTag } from './VoiceJournalTypes';
 import { logger } from '../../core/analytics/logger';
+import { ColorTagBadge } from './ColorTagPicker';
 
 interface SearchEngineProps {
   filter: SearchFilter;
@@ -11,6 +12,7 @@ interface SearchEngineProps {
   onDeleteSavedSearch: (id: string) => void;
   availableTags: string[];
   availableCategories: string[];
+  availableColorTags?: ColorTag[];
 }
 
 export default function SearchEngine({
@@ -21,6 +23,7 @@ export default function SearchEngine({
   onDeleteSavedSearch,
   availableTags,
   availableCategories,
+  availableColorTags = [],
 }: SearchEngineProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
@@ -103,6 +106,51 @@ export default function SearchEngine({
           <Save className="h-4.5 w-4.5" />
         </button>
       </div>
+
+      {/* Active Filters Quick Strip */}
+      {(filter.tags.length > 0 || filter.categories.length > 0) && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider flex items-center gap-1">
+            <TagIcon className="h-3 w-3 text-cyan-400" /> Active:
+          </span>
+          {filter.tags.map((tName) => {
+            const matchedColor = availableColorTags.find(
+              (ct) => ct.name.toLowerCase() === tName.toLowerCase()
+            )?.color || '#06b6d4';
+            return (
+              <ColorTagBadge
+                key={tName}
+                tag={{ name: tName, color: matchedColor }}
+                size="xs"
+                selected
+                onRemove={() => toggleTag(tName)}
+              />
+            );
+          })}
+          {filter.categories.map((cName) => (
+            <span
+              key={cName}
+              className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-semibold bg-indigo-500/15 border border-indigo-500/35 text-indigo-300"
+            >
+              <span>{cName}</span>
+              <button
+                type="button"
+                onClick={() => toggleCategory(cName)}
+                className="hover:text-white"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={() => onFilterChange({ tags: [], categories: [] })}
+            className="text-[9px] font-mono text-gray-500 hover:text-red-400 uppercase px-1.5 py-0.5"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {/* Save Search Form Drawer */}
       {isSaving && (
@@ -206,21 +254,34 @@ export default function SearchEngine({
           {/* Tags cloud */}
           {availableTags.length > 0 && (
             <div className="space-y-1.5 md:col-span-2">
-              <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider block">Filter by Tag Cloud</span>
+              <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider block">Filter by Color Tag Cloud</span>
               <div className="flex gap-1.5 flex-wrap">
-                {availableTags.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className={`px-2 py-1 rounded text-[9px] uppercase font-bold border cursor-pointer transition-all ${
-                      filter.tags.includes(tag)
-                        ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400 font-black'
-                        : 'border-gray-500/10 text-gray-400 hover:text-gray-300'
-                    }`}
-                  >
-                    #{tag}
-                  </button>
-                ))}
+                {availableTags.map((tag) => {
+                  const matchedColor = availableColorTags.find(
+                    (ct) => ct.name.toLowerCase() === tag.toLowerCase()
+                  )?.color || '#06b6d4';
+                  const isSelected = filter.tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[9px] uppercase font-bold border transition-all cursor-pointer"
+                      style={{
+                        backgroundColor: isSelected ? `${matchedColor}35` : `${matchedColor}12`,
+                        borderColor: isSelected ? matchedColor : `${matchedColor}35`,
+                        color: matchedColor,
+                        boxShadow: isSelected ? `0 0 10px ${matchedColor}40` : undefined,
+                      }}
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: matchedColor }}
+                      />
+                      <span>#{tag}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

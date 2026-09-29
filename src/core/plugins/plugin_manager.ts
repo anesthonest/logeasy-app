@@ -219,7 +219,7 @@ class PluginManager {
 
   private checkVersionCompatibility(required: string): boolean {
     // Elegant version comparison checks
-    const reqClean = required.replace(/[^0-9.]/g, '');
+    const reqClean = (required || '').replace(/[^0-9.]/g, '');
     const currentParts = this.currentAppVersion.split('.').map(Number);
     const reqParts = reqClean.split('.').map(Number);
 

@@ -797,13 +797,13 @@ export default function AIIntelligenceDashboard({ userId }: AIIntelligenceDashbo
                           <span className="text-xs font-black text-gray-100 flex items-center gap-1.5 leading-snug">
                             {ins.title}
                             <span className={`text-[9px] px-2 py-0.2 rounded font-mono uppercase ${
-                              ins.category.startsWith('habit_positive') || ins.category === 'achievement'
+                              ins.category?.startsWith('habit_positive') || ins.category === 'achievement'
                                 ? 'bg-emerald-500/10 text-emerald-400'
-                                : ins.category === 'concern' || ins.category.startsWith('habit_negative')
+                                : ins.category === 'concern' || ins.category?.startsWith('habit_negative')
                                 ? 'bg-amber-500/10 text-amber-400'
                                 : 'bg-indigo-500/10 text-indigo-400'
                             }`}>
-                              {ins.category.replace('_', ' ')}
+                              {(ins.category || 'insight').replace('_', ' ')}
                             </span>
                           </span>
                         </div>

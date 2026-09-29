@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Activity, Shield, Database, Wifi, WifiOff, HardDrive, Mic, Square, Play, Pause,
   RefreshCw, Sliders, Settings, Terminal, Bell, User, LogIn, LogOut, Key, CheckCircle,
   AlertTriangle, Cpu, FileText, Trash2, Volume2, Lock, Moon, Sun, Eye, Heart, Info, Globe, HelpCircle, EyeOff, TrendingUp, Gem, ShieldAlert,
-  Flame, ArrowRight, ChevronRight, Sparkles, Calendar, BookOpen, Clock, LayoutGrid, Check, Plus
+  Flame, ArrowRight, ChevronRight, Sparkles, Calendar, BookOpen, Clock, LayoutGrid, Check, Plus, Search, X
 } from 'lucide-react';
 
 // Core Imports
 import { logger, LogEntry, LogLevel } from './core/analytics/logger';
 import { securityManager } from './core/security/security_manager';
-import { localDB, LocalJournalEntry, LocalSyncQueueItem } from './core/database/local_db';
+import { localDB, LocalJournalEntry, LocalSyncQueueItem, ColorTag } from './core/database/local_db';
 import { syncEngine, SyncStatus, ConflictResolutionPolicy } from './core/sync/sync_engine';
 import { aiService, PROMPT_REGISTRY, PromptType, AIResponse } from './core/ai/ai_service';
 import { audioEngine, AudioMetadata } from './core/audio/audio_engine';
@@ -19,16 +19,19 @@ import { authService, AuthSession, UserProfile } from './features/auth/auth_serv
 import { settingsProvider, AppSettings } from './features/settings/settings_provider';
 import VoiceJournalDashboard from './components/voice/VoiceJournalDashboard';
 import AIIntelligenceDashboard from './components/voice/AIIntelligenceDashboard';
-import AIReflectionCoach from './components/voice/AIReflectionCoach';
 import PersonalIntelligenceEngine from './components/voice/PersonalIntelligenceEngine';
 import SecurityPrivacyDashboard from './components/voice/SecurityPrivacyDashboard';
 import MonetizationDashboard from './components/voice/MonetizationDashboard';
 import { AdminConsole } from './components/admin/AdminConsole';
-import OnboardingWizard from './components/voice/OnboardingWizard';
 import HomeDashboard from './components/voice/HomeDashboard';
 import SimpleInsightsDashboard from './components/voice/SimpleInsightsDashboard';
 import ProfileSettingsConsole from './components/voice/ProfileSettingsConsole';
-import HIOSDashboard from './components/voice/HIOSDashboard';
+import ColorTagPicker, { ColorTagBadge, DEFAULT_SUGGESTED_TAGS } from './components/voice/ColorTagPicker';
+
+// Optimized code-splitting for large secondary views
+const HIOSDashboard = React.lazy(() => import('./components/voice/HIOSDashboard'));
+const AIReflectionCoach = React.lazy(() => import('./components/voice/AIReflectionCoach'));
+const OnboardingWizard = React.lazy(() => import('./components/voice/OnboardingWizard'));
 
 export default function App() {
   // State Subscriptions
@@ -62,7 +65,68 @@ export default function App() {
   const [journalMood, setJournalMood] = useState(7);
   const [journalMoodLabel, setJournalMoodLabel] = useState('Satisfied');
   const [journalCategories, setJournalCategories] = useState('Growth, Journaling');
+  const [journalColorTags, setJournalColorTags] = useState<ColorTag[]>([
+    { name: 'Growth', color: '#06b6d4' },
+    { name: 'Reflections', color: '#6366f1' },
+  ]);
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
   const [conflictTrigger, setConflictTrigger] = useState(false);
+
+  // Spoken Journal search filter state
+  const [journalSearchQuery, setJournalSearchQuery] = useState('');
+
+  // Extract all color-coded tags present in the local database entries
+  const availableRecordColorTags = useMemo(() => {
+    const map = new Map<string, ColorTag>();
+    localEntries.forEach((entry) => {
+      if (entry.colorTags && entry.colorTags.length > 0) {
+        entry.colorTags.forEach((ct) => {
+          const key = ct.name.toLowerCase();
+          if (!map.has(key)) {
+            map.set(key, ct);
+          }
+        });
+      } else if (entry.tags && entry.tags.length > 0) {
+        entry.tags.forEach((t) => {
+          const key = t.toLowerCase();
+          if (!map.has(key)) {
+            map.set(key, { name: t, color: '#06b6d4' });
+          }
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [localEntries]);
+
+  // Enhanced retrieval logic matching search query and selected color-coded tag
+  const filteredJournalEntries = useMemo(() => {
+    let result = localEntries;
+
+    if (selectedTagFilter) {
+      const target = selectedTagFilter.toLowerCase();
+      result = result.filter((entry) =>
+        (entry.colorTags || []).some((ct) => ct.name.toLowerCase() === target) ||
+        (entry.tags || []).some((t) => t.toLowerCase() === target)
+      );
+    }
+
+    if (journalSearchQuery.trim()) {
+      const query = journalSearchQuery.toLowerCase().trim();
+      result = result.filter((entry) => {
+        const transcriptMatch = (entry.transcript || '').toLowerCase().includes(query);
+        const categoriesMatch = (entry.categories || []).some((cat) =>
+          cat.toLowerCase().includes(query)
+        );
+        const titleMatch = (entry.title || '').toLowerCase().includes(query);
+        const tagMatch =
+          (entry.colorTags || []).some((ct) => ct.name.toLowerCase().includes(query)) ||
+          (entry.tags || []).some((t) => t.toLowerCase().includes(query));
+        return transcriptMatch || categoriesMatch || titleMatch || tagMatch;
+      });
+    }
+
+    return result;
+  }, [localEntries, journalSearchQuery, selectedTagFilter]);
 
   // Audio recording states
   const [isRecording, setIsRecording] = useState(false);
@@ -306,6 +370,8 @@ export default function App() {
       moodScore: journalMood,
       moodLabel: journalMoodLabel,
       categories: journalCategories.split(',').map(c => c.trim()).filter(Boolean),
+      tags: journalColorTags.map(t => t.name.toLowerCase()),
+      colorTags: journalColorTags,
       syncStatus: syncState.isOnline ? 'synced' : 'pending_create',
     };
 
@@ -579,25 +645,79 @@ export default function App() {
               {/* TAB 2: JOURNAL (VOICE JOURNAL DASHBOARD) */}
               {activeTab === 'journal' && (
                 <div className="space-y-6 flex-1 flex flex-col min-h-0">
-                  <div className="space-y-1">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                      <Mic className="h-5 w-5 text-cyan-400" />
-                      <span>Spoken Journal Timeline</span>
-                    </h2>
-                    <p className="text-xs text-gray-400">
-                      Production-ready offline-first vocal logging workspace. Organize folder collections and review speech-to-text transcripts.
-                    </p>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Mic className="h-5 w-5 text-cyan-400" />
+                        <span>Spoken Journal Timeline</span>
+                      </h2>
+                      <p className="text-xs text-gray-400">
+                        Production-ready offline-first vocal logging workspace. Organize folder collections and review speech-to-text transcripts.
+                      </p>
+                    </div>
+
+                    {/* Search bar filtering localEntries */}
+                    <div className="w-full md:w-80 lg:w-96">
+                      <div className="relative flex items-center">
+                        <Search className="absolute left-3.5 h-4 w-4 text-cyan-400/80 pointer-events-none" />
+                        <input
+                          id="spoken-journal-search-input"
+                          type="text"
+                          value={journalSearchQuery}
+                          onChange={(e) => setJournalSearchQuery(e.target.value)}
+                          placeholder="Search transcript text or categories..."
+                          className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-gray-500/10 border border-gray-500/20 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 transition-all font-medium"
+                        />
+                        {journalSearchQuery && (
+                          <button
+                            id="spoken-journal-search-clear"
+                            type="button"
+                            onClick={() => setJournalSearchQuery('')}
+                            className="absolute right-3 p-1 rounded-full text-gray-400 hover:text-gray-200 hover:bg-gray-500/20 transition-colors cursor-pointer"
+                            title="Clear search"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      {journalSearchQuery.trim() && (
+                        <div className="flex items-center justify-between mt-1.5 px-1 text-[11px] text-gray-400">
+                          <span>
+                            Showing <strong className="text-cyan-400">{filteredJournalEntries.length}</strong> of {localEntries.length} entries
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setJournalSearchQuery('')}
+                            className="text-cyan-400 hover:underline text-[10px] cursor-pointer"
+                          >
+                            Clear filter
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <VoiceJournalDashboard userId={session.user?.uid || 'guest_user'} />
+
+                  <VoiceJournalDashboard 
+                    userId={session.user?.uid || 'guest_user'} 
+                    filteredEntries={filteredJournalEntries}
+                    onEntriesChanged={reloadLocalEntries}
+                  />
                 </div>
               )}
 
               {/* TAB 3: INSIGHTS (HIOS WORKSPACE) */}
               {activeTab === 'insights' && (
-                <HIOSDashboard 
-                  userId={session.user?.uid || 'guest_user'} 
-                  localEntries={localEntries} 
-                />
+                <React.Suspense fallback={
+                  <div className="p-12 flex flex-col items-center justify-center text-center space-y-3">
+                    <Activity className="h-6 w-6 text-cyan-400 animate-spin" />
+                    <p className="text-xs text-gray-400">Loading Human Intelligence OS...</p>
+                  </div>
+                }>
+                  <HIOSDashboard 
+                    userId={session.user?.uid || 'guest_user'} 
+                    localEntries={localEntries} 
+                  />
+                </React.Suspense>
               )}
 
               {/* TAB 4: COACH */}
@@ -612,7 +732,14 @@ export default function App() {
                       Converse with your secure on-device therapist designed to encourage growth and cognitive awareness.
                     </p>
                   </div>
-                  <AIReflectionCoach userId={session.user?.uid || 'guest_user'} />
+                  <React.Suspense fallback={
+                    <div className="p-12 flex flex-col items-center justify-center text-center space-y-3">
+                      <Sparkles className="h-6 w-6 text-cyan-400 animate-pulse" />
+                      <p className="text-xs text-gray-400">Initializing AI Coach...</p>
+                    </div>
+                  }>
+                    <AIReflectionCoach userId={session.user?.uid || 'guest_user'} />
+                  </React.Suspense>
                 </div>
               )}
 
@@ -821,6 +948,21 @@ export default function App() {
                               />
                             </div>
 
+                            {/* Color-Coded Tags Selection & Creator */}
+                            <div className="pt-1 border-t border-gray-500/10">
+                              <ColorTagPicker
+                                tags={journalColorTags}
+                                onChange={setJournalColorTags}
+                                availableSuggestions={
+                                  availableRecordColorTags.length > 0
+                                    ? availableRecordColorTags
+                                    : DEFAULT_SUGGESTED_TAGS
+                                }
+                                label="Color-Coded Tags"
+                                placeholder="Add custom tag (e.g. Work, Ideas, Health)..."
+                              />
+                            </div>
+
                             <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/10 flex items-center justify-between">
                               <div>
                                 <span className="text-[11px] text-amber-400 font-bold block">Inject Conflict Target?</span>
@@ -836,7 +978,7 @@ export default function App() {
 
                             <button 
                               onClick={handleSaveJournal}
-                              className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-semibold rounded-xl shadow-md text-xs cursor-pointer"
+                              className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:opacity-95 text-white font-semibold rounded-xl shadow-md text-xs cursor-pointer transition-all"
                             >
                               Save Record (Local Cache First)
                             </button>
@@ -857,16 +999,122 @@ export default function App() {
                             </div>
                           </div>
 
+                          {/* Record Store with Tag Retrieval & Filter */}
                           <div className="space-y-3">
-                            <h4 className="text-[10px] font-mono uppercase tracking-widest text-gray-400">IndexedDB Record Store</h4>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
+                              <h4 className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
+                                IndexedDB Record Store ({filteredJournalEntries.length} of {localEntries.length})
+                              </h4>
+
+                              {/* Search query input */}
+                              <div className="relative">
+                                <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-gray-500" />
+                                <input
+                                  type="text"
+                                  value={journalSearchQuery}
+                                  onChange={(e) => setJournalSearchQuery(e.target.value)}
+                                  placeholder="Search records or tags..."
+                                  className="w-48 pl-8 pr-7 py-1 rounded-lg bg-gray-500/5 border border-gray-500/15 text-xs text-gray-300 outline-none focus:border-cyan-400"
+                                />
+                                {journalSearchQuery && (
+                                  <button
+                                    onClick={() => setJournalSearchQuery('')}
+                                    className="absolute right-2 top-1.5 text-gray-400 hover:text-white"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Color-Coded Tag Retrieval Filter Cloud */}
+                            {availableRecordColorTags.length > 0 && (
+                              <div className="p-2.5 rounded-xl bg-gray-500/5 border border-gray-500/10 space-y-1.5">
+                                <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 uppercase">
+                                  <span>Filter & Retrieve by Tag:</span>
+                                  {selectedTagFilter && (
+                                    <button
+                                      onClick={() => setSelectedTagFilter(null)}
+                                      className="text-cyan-400 hover:underline cursor-pointer"
+                                    >
+                                      Clear Tag Filter
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedTagFilter(null)}
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all cursor-pointer ${
+                                      !selectedTagFilter
+                                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                                        : 'bg-gray-500/10 border-gray-500/20 text-gray-400 hover:text-gray-200'
+                                    }`}
+                                  >
+                                    All ({localEntries.length})
+                                  </button>
+                                  {availableRecordColorTags.map((ct) => {
+                                    const isSelected =
+                                      selectedTagFilter?.toLowerCase() === ct.name.toLowerCase();
+                                    const matchCount = localEntries.filter((e) =>
+                                      (e.colorTags || []).some(
+                                        (tag) => tag.name.toLowerCase() === ct.name.toLowerCase()
+                                      ) ||
+                                      (e.tags || []).some(
+                                        (tag) => tag.toLowerCase() === ct.name.toLowerCase()
+                                      )
+                                    ).length;
+
+                                    return (
+                                      <button
+                                        key={ct.name}
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedTagFilter(isSelected ? null : ct.name)
+                                        }
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all cursor-pointer"
+                                        style={{
+                                          backgroundColor: isSelected ? `${ct.color}35` : `${ct.color}15`,
+                                          borderColor: isSelected ? ct.color : `${ct.color}40`,
+                                          color: ct.color,
+                                          boxShadow: isSelected ? `0 0 8px ${ct.color}40` : undefined,
+                                        }}
+                                      >
+                                        <span
+                                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                                          style={{ backgroundColor: ct.color }}
+                                        />
+                                        <span>#{ct.name}</span>
+                                        <span className="opacity-70 text-[9px]">({matchCount})</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                             
-                            {localEntries.length === 0 ? (
-                              <div className="p-8 border border-dashed border-gray-500/20 rounded-2xl text-center space-y-1">
+                            {filteredJournalEntries.length === 0 ? (
+                              <div className="p-8 border border-dashed border-gray-500/20 rounded-2xl text-center space-y-2">
                                 <Database className="h-8 w-8 text-gray-600 mx-auto" />
-                                <p className="text-xs font-medium text-gray-400">Database partition is empty.</p>
+                                <p className="text-xs font-medium text-gray-400">
+                                  {selectedTagFilter || journalSearchQuery
+                                    ? 'No records match the current tag/search filter.'
+                                    : 'Database partition is empty.'}
+                                </p>
+                                {(selectedTagFilter || journalSearchQuery) && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedTagFilter(null);
+                                      setJournalSearchQuery('');
+                                    }}
+                                    className="text-xs text-cyan-400 underline cursor-pointer"
+                                  >
+                                    Reset Filters
+                                  </button>
+                                )}
                               </div>
                             ) : (
-                              localEntries.map((entry) => (
+                              filteredJournalEntries.map((entry) => (
                                 <div key={entry.id} className="p-3.5 rounded-xl bg-gray-500/5 border border-gray-500/10 space-y-2 relative group text-xs">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -891,6 +1139,31 @@ export default function App() {
                                   </div>
 
                                   <p className="text-gray-300 leading-relaxed font-sans">{entry.transcript}</p>
+
+                                  {/* Color-Coded Tags on Record */}
+                                  {((entry.colorTags && entry.colorTags.length > 0) || (entry.tags && entry.tags.length > 0)) && (
+                                    <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-500/5">
+                                      {entry.colorTags && entry.colorTags.length > 0 ? (
+                                        entry.colorTags.map((tag, idx) => (
+                                          <ColorTagBadge
+                                            key={`${tag.name}-${idx}`}
+                                            tag={tag}
+                                            size="xs"
+                                            onClick={() => setSelectedTagFilter(tag.name)}
+                                          />
+                                        ))
+                                      ) : (
+                                        entry.tags?.map((tStr, idx) => (
+                                          <ColorTagBadge
+                                            key={`${tStr}-${idx}`}
+                                            tag={{ name: tStr, color: '#06b6d4' }}
+                                            size="xs"
+                                            onClick={() => setSelectedTagFilter(tStr)}
+                                          />
+                                        ))
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               ))
                             )}
@@ -1046,7 +1319,9 @@ export default function App() {
       {/* GUIDED ONBOARDING FLOW OVERLAY */}
       <AnimatePresence>
         {showOnboarding && (
-          <OnboardingWizard onClose={() => setShowOnboarding(false)} />
+          <React.Suspense fallback={null}>
+            <OnboardingWizard onClose={() => setShowOnboarding(false)} />
+          </React.Suspense>
         )}
       </AnimatePresence>
 

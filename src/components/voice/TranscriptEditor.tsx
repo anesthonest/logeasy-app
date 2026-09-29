@@ -3,9 +3,10 @@ import {
   FileText, Languages, RefreshCw, Check, Sparkles, AlertTriangle, 
   Tag as TagIcon, LayoutGrid, Heart, Pin, Archive, HelpCircle 
 } from 'lucide-react';
-import { LocalJournalEntry } from '../../core/database/local_db';
+import { LocalJournalEntry, ColorTag } from '../../core/database/local_db';
 import { logger } from '../../core/analytics/logger';
 import AudioPlaybackEngine from './AudioPlaybackEngine';
+import ColorTagPicker from './ColorTagPicker';
 
 interface TranscriptEditorProps {
   entry: LocalJournalEntry;
@@ -28,7 +29,11 @@ export default function TranscriptEditor({ entry, onSave, onRetryTranscription }
   const [title, setTitle] = useState(entry.title || '');
   const [transcript, setTranscript] = useState(entry.transcript || '');
   const [language, setLanguage] = useState(entry.language || 'en-US');
-  const [tagsInput, setTagsInput] = useState((entry.tags || []).join(', '));
+  const [colorTags, setColorTags] = useState<ColorTag[]>(
+    entry.colorTags && entry.colorTags.length > 0
+      ? entry.colorTags
+      : (entry.tags || []).map((t) => ({ name: t, color: '#06b6d4' }))
+  );
   const [categoriesInput, setCategoriesInput] = useState((entry.categories || []).join(', '));
   
   // Status states
@@ -42,7 +47,11 @@ export default function TranscriptEditor({ entry, onSave, onRetryTranscription }
     setTitle(entry.title || '');
     setTranscript(entry.transcript || '');
     setLanguage(entry.language || 'en-US');
-    setTagsInput((entry.tags || []).join(', '));
+    setColorTags(
+      entry.colorTags && entry.colorTags.length > 0
+        ? entry.colorTags
+        : (entry.tags || []).map((t) => ({ name: t, color: '#06b6d4' }))
+    );
     setCategoriesInput((entry.categories || []).join(', '));
     setSaveStatus('saved');
   }, [entry.id]);
@@ -88,9 +97,13 @@ export default function TranscriptEditor({ entry, onSave, onRetryTranscription }
     logger.info('TranscriptEditor', `Accent-tolerant target dialect configured: ${val}`);
   };
 
-  const handleTagsBlur = () => {
-    const list = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
-    onSave({ tags: list });
+  const handleColorTagsChange = (newTags: ColorTag[]) => {
+    setColorTags(newTags);
+    setSaveStatus('dirty');
+    triggerAutoSave({
+      colorTags: newTags,
+      tags: newTags.map((t) => t.name.toLowerCase()),
+    });
   };
 
   const handleCategoriesBlur = () => {
@@ -216,35 +229,30 @@ export default function TranscriptEditor({ entry, onSave, onRetryTranscription }
           />
         </div>
 
-        {/* Metadata tagging and Categories */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-[11px] font-mono text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <TagIcon className="h-3 w-3 text-cyan-400" /> Tags (comma-separated)
-            </label>
-            <input
-              type="text"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              onBlur={handleTagsBlur}
-              placeholder="growth, cognitive, reflections"
-              className="w-full px-3 py-2 rounded-xl bg-gray-500/5 border border-gray-500/15 outline-none text-xs text-gray-300 focus:border-cyan-500/30"
-            />
-          </div>
+        {/* Custom Color-Coded Tags Manager */}
+        <div className="p-3.5 rounded-xl bg-gray-500/5 border border-gray-500/15 space-y-2">
+          <ColorTagPicker
+            tags={colorTags}
+            onChange={handleColorTagsChange}
+            label="Custom Color-Coded Tags"
+            placeholder="Add color tag (e.g. Work, Ideas, Health)..."
+            compact
+          />
+        </div>
 
-          <div className="space-y-1">
-            <label className="text-[11px] font-mono text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <LayoutGrid className="h-3 w-3 text-cyan-400" /> Categories
-            </label>
-            <input
-              type="text"
-              value={categoriesInput}
-              onChange={(e) => setCategoriesInput(e.target.value)}
-              onBlur={handleCategoriesBlur}
-              placeholder="Mental Wellness, Work Log"
-              className="w-full px-3 py-2 rounded-xl bg-gray-500/5 border border-gray-500/15 outline-none text-xs text-gray-300 focus:border-cyan-500/30"
-            />
-          </div>
+        {/* Categories */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-mono text-gray-400 uppercase tracking-wider flex items-center gap-1">
+            <LayoutGrid className="h-3 w-3 text-cyan-400" /> Categories
+          </label>
+          <input
+            type="text"
+            value={categoriesInput}
+            onChange={(e) => setCategoriesInput(e.target.value)}
+            onBlur={handleCategoriesBlur}
+            placeholder="Mental Wellness, Work Log"
+            className="w-full px-3 py-2 rounded-xl bg-gray-500/5 border border-gray-500/15 outline-none text-xs text-gray-300 focus:border-cyan-500/30"
+          />
         </div>
       </div>
     </div>

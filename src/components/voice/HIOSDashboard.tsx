@@ -13,6 +13,7 @@ import { AIMemory, AIEntity, AIInsight } from '../../core/ai/ai_types';
 import { logger } from '../../core/analytics/logger';
 import PersonalIntelligenceEngine from './PersonalIntelligenceEngine';
 import SimpleInsightsDashboard from './SimpleInsightsDashboard';
+import PersonalLifeIntelligenceHub from '../hios/PersonalLifeIntelligenceHub';
 
 interface HIOSDashboardProps {
   userId: string;
@@ -21,7 +22,7 @@ interface HIOSDashboardProps {
 
 export default function HIOSDashboard({ userId, localEntries }: HIOSDashboardProps) {
   // Navigation: central command hub
-  const [activeMaintab, setActiveMaintab] = useState<'core' | 'knowledge' | 'strategist' | 'learning' | 'pm' | 'reviews' | 'analytics' | 'sovereignty' | 'pricing'>('core');
+  const [activeMaintab, setActiveMaintab] = useState<'core' | 'intelligence' | 'knowledge' | 'strategist' | 'learning' | 'pm' | 'reviews' | 'analytics' | 'sovereignty' | 'pricing'>('intelligence');
 
   // Multi-Agent log stream / simulation
   const [agentLogs, setAgentLogs] = useState<Array<{ id: string; agent: string; message: string; timestamp: string }>>([]);
@@ -734,6 +735,7 @@ Return a JSON block containing the connection. Return ONLY valid JSON, do not in
           {/* CENTRAL NAVIGATION TAB SELECTOR FOR V8 MODULES */}
           <div className="flex items-center gap-1 overflow-x-auto border-b border-gray-200/10 pb-px shrink-0 select-none">
             {[
+              { id: 'intelligence', label: 'Life Intelligence', icon: Brain },
               { id: 'core', label: 'Command Hub', icon: LayoutGrid },
               { id: 'knowledge', label: 'Second Brain', icon: Network },
               { id: 'strategist', label: 'AI Strategist', icon: Compass },
@@ -765,6 +767,14 @@ Return a JSON block containing the connection. Return ONLY valid JSON, do not in
           {/* MAIN TABS RENDER AREA */}
           <div className="space-y-6">
             
+            {/* MODULE 0: PERSONAL LIFE INTELLIGENCE LAYER */}
+            {activeMaintab === 'intelligence' && (
+              <PersonalLifeIntelligenceHub 
+                userId={userId} 
+                localEntries={localEntries} 
+              />
+            )}
+
             {/* MODULE 1: COMMAND HUB (LifeOS Command Center) */}
             {activeMaintab === 'core' && (
               <div className="space-y-6">

@@ -1,15 +1,19 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
-// Fix for ESM __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Determine base directory safely in both ESM (tsx dev) and CommonJS (bundled dist/server.cjs)
+const getDirname = (): string => {
+  if (typeof __dirname !== 'undefined') {
+    return __dirname;
+  }
+  return process.cwd();
+};
 
 async function startServer() {
   const app = express();
@@ -72,7 +76,7 @@ async function startServer() {
       console.log('[Server] Dispatching requests to Gemini API...');
       
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           systemInstruction: systemInstruction || 'You are an empathetic, clinical journaling assistant.',
@@ -86,7 +90,7 @@ async function startServer() {
       res.json({
         text: responseText,
         tokensUsed: response.usageMetadata?.totalTokenCount || 250,
-        provider: 'Google Gemini 3.5 (Flash)',
+        provider: 'Google Gemini 3.8 (Flash)',
       });
     } catch (err: any) {
       console.error('[Server] Gemini SDK execution error:', err);
@@ -97,8 +101,67 @@ async function startServer() {
     }
   });
 
+  // Streaming Gemini API Proxy Route (SSE - Server-Sent Events)
+  app.post('/api/ai/stream', async (req, res) => {
+    const { prompt, systemInstruction } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required.' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    // Set up SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+      const fallbackText = "### Insight Summary (Offline/Simulated)\nYour thought was captured and analyzed locally. Connect your GEMINI_API_KEY to enable live multi-agent intelligence.";
+      const words = fallbackText.split(' ');
+      for (const word of words) {
+        res.write(`data: ${JSON.stringify({ chunk: word + ' ' })}\n\n`);
+        await new Promise(r => setTimeout(r, 25));
+      }
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      return res.end();
+    }
+
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const stream = await ai.models.generateContentStream({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: {
+          systemInstruction: systemInstruction || 'You are an empathetic, deep-listening journaling companion.',
+          maxOutputTokens: 1000,
+          temperature: 0.7,
+        }
+      });
+
+      for await (const chunk of stream) {
+        const text = chunk.text;
+        if (text) {
+          res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    } catch (err: any) {
+      console.error('[Server] Gemini Stream error:', err);
+      res.write(`data: ${JSON.stringify({ error: err.message || 'Stream processing failed.' })}\n\n`);
+      res.end();
+    }
+  });
+
+  // Determine if running compiled production bundle vs live development tsx
+  const isProduction = process.env.NODE_ENV === 'production' || 
+    (Boolean(process.argv[1]) && (process.argv[1].endsWith('server.cjs') || process.argv[1].endsWith('server.js')));
+
   // VITE DEV MIDDLEWARE vs PRODUCTION STATIC BUNDLE
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProduction) {
     console.log('[Server] Launching in Development Mode with Vite Middleware...');
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -107,16 +170,48 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     console.log('[Server] Launching in Production Mode serving static files...');
-    const distPath = path.join(process.cwd(), 'dist');
+    // Look for dist/ directory whether running from workspace root or inside dist/
+    const currentDir = getDirname();
+    const candidatePaths = [
+      path.join(process.cwd(), 'dist'),
+      path.resolve(currentDir, 'dist'),
+      currentDir,
+      path.resolve(currentDir, '..', 'dist'),
+    ];
+
+    const distPath = candidatePaths.find(p => fs.existsSync(path.join(p, 'index.html'))) || candidatePaths[0];
+    console.log(`[Server] Static assets resolved at: ${distPath}`);
+
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send('Production build not found. Please ensure "npm run build" has run.');
+      }
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[LogEasy Server] Running on http://localhost:${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[LogEasy Server] Running on http://0.0.0.0:${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
   });
+
+  // Graceful shutdown handling for container lifecycle events (Render, Cloud Run, Docker)
+  const handleShutdown = (signal: string) => {
+    console.log(`[Server] Received ${signal}. Shutting down gracefully...`);
+    server.close(() => {
+      console.log('[Server] HTTP server closed cleanly.');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.error('[Server] Forced shutdown after timeout.');
+      process.exit(1);
+    }, 5000).unref();
+  };
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
 }
 
 startServer().catch((e) => {

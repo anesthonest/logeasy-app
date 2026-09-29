@@ -156,7 +156,7 @@ interface MonetizationDashboardProps {
 
 export default function MonetizationDashboard({ userId }: MonetizationDashboardProps) {
   // Global service states
-  const [subscription, setSubscription] = useState<SubscriptionState | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionState>(() => subscriptionService.getSubscription(userId));
   const [transactions, setTransactions] = useState<BillingTransaction[]>([]);
   const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
@@ -327,13 +327,13 @@ export default function MonetizationDashboard({ userId }: MonetizationDashboardP
             )}
           </div>
           <h2 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-            {subscription.plan === 'free' ? 'LogEasy Free Tier' : 'LogEasy Premium Vault'}
-            {subscription.status === 'active' && <Gem className="h-5 w-5 text-yellow-400 fill-yellow-400" />}
+            {(subscription?.plan || 'free') === 'free' ? 'LogEasy Free Tier' : 'LogEasy Premium Vault'}
+            {subscription?.status === 'active' && <Gem className="h-5 w-5 text-yellow-400 fill-yellow-400" />}
           </h2>
           <p className="text-xs text-slate-400 max-w-xl">
-            {subscription.plan === 'free' 
+            {(subscription?.plan || 'free') === 'free' 
               ? 'You are running on our standard offline-first model. Upgrade to unlock cross-device cloud sync and infinite AI Summaries.' 
-              : `Your secure billing access remains active through ${subscription.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'Forever (Lifetime Key)'}.`}
+              : `Your secure billing access remains active through ${subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'Forever (Lifetime Key)'}.`}
           </p>
         </div>
 
@@ -361,7 +361,7 @@ export default function MonetizationDashboard({ userId }: MonetizationDashboardP
           </div>
           <div>
             <div className="text-[10px] font-mono text-slate-400 uppercase">Vault Tier</div>
-            <div className="text-sm font-bold text-white capitalize">{subscription.plan.replace('_', ' ')}</div>
+            <div className="text-sm font-bold text-white capitalize">{(subscription?.plan || 'free').replace('_', ' ')}</div>
           </div>
         </div>
 
@@ -732,7 +732,7 @@ export default function MonetizationDashboard({ userId }: MonetizationDashboardP
                 {transactions.map((tx) => (
                   <div key={tx.id} className="flex items-center justify-between bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/60 text-xs">
                     <div className="space-y-0.5">
-                      <div className="font-semibold text-slate-200 capitalize">{tx.plan.replace('_', ' ')} Plan</div>
+                      <div className="font-semibold text-slate-200 capitalize">{(tx?.plan || 'Standard').replace('_', ' ')} Plan</div>
                       <div className="text-[10px] text-slate-500 font-mono">{new Date(tx.date).toLocaleDateString()}</div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1190,7 +1190,7 @@ export default function MonetizationDashboard({ userId }: MonetizationDashboardP
               {Object.entries(cohortSummary.featureAdoption).map(([feat, percentage]: any) => (
                 <div key={feat} className="space-y-1">
                   <div className="flex justify-between text-xs text-slate-300 capitalize">
-                    <span>{feat.replace('_', ' ')}</span>
+                    <span>{feat ? String(feat).replace('_', ' ') : 'Feature'}</span>
                     <span className="font-mono">{percentage}%</span>
                   </div>
                   <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">

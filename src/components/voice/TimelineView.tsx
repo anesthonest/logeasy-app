@@ -6,6 +6,7 @@ import {
 import { LocalJournalEntry } from '../../core/database/local_db';
 import { Folder } from './VoiceJournalTypes';
 import { logger } from '../../core/analytics/logger';
+import { ColorTagBadge } from './ColorTagPicker';
 
 interface TimelineViewProps {
   entries: LocalJournalEntry[];
@@ -20,6 +21,7 @@ interface TimelineViewProps {
   onMoveToFolder: (id: string, folderId: string | undefined) => void;
   onExport: (entry: LocalJournalEntry) => void;
   onShare: (entry: LocalJournalEntry, type: 'text' | 'audio') => void;
+  onTagClick?: (tag: string) => void;
 }
 
 type GroupType = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -36,7 +38,8 @@ export default function TimelineView({
   onDuplicate,
   onMoveToFolder,
   onExport,
-  onShare
+  onShare,
+  onTagClick
 }: TimelineViewProps) {
   const [groupType, setGroupType] = useState<GroupType>('daily');
   const [activeFolderDropdownId, setActiveFolderDropdownId] = useState<string | null>(null);
@@ -208,6 +211,31 @@ export default function TimelineView({
                           {entry.transcript || 'Spoken journal holds no transcript yet.'}
                         </p>
                       </div>
+
+                      {/* Color-Coded Tags Badges */}
+                      {((entry.colorTags && entry.colorTags.length > 0) || (entry.tags && entry.tags.length > 0)) && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-2">
+                          {entry.colorTags && entry.colorTags.length > 0 ? (
+                            entry.colorTags.map((t, idx) => (
+                              <ColorTagBadge
+                                key={`${t.name}-${idx}`}
+                                tag={t}
+                                size="xs"
+                                onClick={() => onTagClick?.(t.name)}
+                              />
+                            ))
+                          ) : (
+                            entry.tags?.map((tagStr, idx) => (
+                              <ColorTagBadge
+                                key={`${tagStr}-${idx}`}
+                                tag={{ name: tagStr, color: '#06b6d4' }}
+                                size="xs"
+                                onClick={() => onTagClick?.(tagStr)}
+                              />
+                            ))
+                          )}
+                        </div>
+                      )}
 
                       {/* Info bar: duration, words, actions */}
                       <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-500/5 text-[10px]">

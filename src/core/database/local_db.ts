@@ -18,6 +18,52 @@ import {
   CoachingPreferences,
   DailyCheckIn
 } from '../ai/coach_types';
+import {
+  PersonProfile,
+  RomanticSpace,
+  TherapistCollaboration,
+  BodyObservation,
+  RestRecord,
+  CreativityWork,
+  MeaningEntry,
+  LifeChapter,
+  LetterToSelf,
+  ForgivenessEntry,
+  GriefEntry,
+  LegacyItem,
+  HeritageEntry,
+  NatureEntry,
+  ContributionEntry,
+  DecisionWorkspace,
+  JoySavoringEntry,
+  DigitalSelfProfile,
+  AIMemoryProposal,
+  SharedResourceRecord,
+  AgentActionLog
+} from './hios_types';
+import {
+  LifeKnowledgeItem,
+  LessonProposal,
+  PatternObservation,
+  ContradictionRecord,
+  OpportunityItem,
+  UnfinishedItem,
+  DecisionRecord,
+  PersonalBriefing,
+  MemoryMoment,
+  ResurfacingRule,
+  FutureSelfProfile,
+  ScenarioSimulation,
+  PersonalExperiment,
+  LifeReviewRecord,
+  AnnualLifeBook,
+  AIAccessPolicy
+} from '../intelligence/types';
+
+export interface ColorTag {
+  name: string;
+  color: string;
+}
 
 export interface LocalJournalEntry {
   id: string;
@@ -36,6 +82,7 @@ export interface LocalJournalEntry {
   aiProcessingStatus?: 'idle' | 'processing' | 'completed' | 'failed';
   categories: string[];
   tags?: string[];
+  colorTags?: ColorTag[];
   location?: string;
   favorite?: boolean;
   archived?: boolean;
@@ -60,7 +107,7 @@ export interface LocalSyncQueueItem {
 }
 
 const DB_NAME = 'LogEasyDB';
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 
 class LocalDatabase {
   private static instance: LocalDatabase;
@@ -212,6 +259,55 @@ class LocalDatabase {
           const store = db.createObjectStore('daily_checkins', { keyPath: 'id' });
           store.createIndex('userId', 'userId', { unique: false });
           store.createIndex('createdAt', 'createdAt', { unique: false });
+        }
+
+        // HIOS Core Sovereign Stores (V8 Extended HIOS Blueprint)
+        const hiosStores = [
+          'people_profiles',
+          'romantic_spaces',
+          'therapist_collaborations',
+          'body_observations',
+          'rest_records',
+          'creativity_works',
+          'meaning_entries',
+          'life_chapters',
+          'letters_to_self',
+          'forgiveness_entries',
+          'grief_entries',
+          'legacy_items',
+          'heritage_entries',
+          'nature_entries',
+          'contribution_entries',
+          'decision_workspaces',
+          'joy_savoring_entries',
+          'digital_self_profile',
+          'ai_memory_proposals',
+          'shared_resources',
+          'agent_action_logs',
+          // Personal Life Intelligence Layer Stores
+          'knowledge_vault',
+          'lesson_proposals',
+          'pattern_observations',
+          'contradiction_records',
+          'opportunity_items',
+          'unfinished_items',
+          'enhanced_decisions',
+          'personal_briefings',
+          'memory_moments',
+          'resurfacing_rules',
+          'future_self_profiles',
+          'scenario_simulations',
+          'personal_experiments',
+          'life_review_records',
+          'annual_life_books',
+          'ai_access_policies'
+        ];
+
+        for (const storeName of hiosStores) {
+          if (!db.objectStoreNames.contains(storeName)) {
+            const store = db.createObjectStore(storeName, { keyPath: 'id' });
+            store.createIndex('userId', 'userId', { unique: false });
+          }
         }
 
         logger.info('LocalDatabase', 'Database tables / stores created successfully.');
@@ -661,6 +757,408 @@ class LocalDatabase {
       }
     }
     logger.info('LocalDatabase', 'AI records purged completely.');
+  }
+
+  // --- HIOS EXTENDED SOVEREIGN MODULE METHODS ---
+
+  // People Profiles (Family & Friends)
+  public async savePersonProfile(person: PersonProfile): Promise<void> {
+    await this.saveToStore('people_profiles', person);
+  }
+  public async getPeopleProfiles(userId: string): Promise<PersonProfile[]> {
+    return this.getByUserIdFromStore<PersonProfile>('people_profiles', userId);
+  }
+  public async deletePersonProfile(id: string): Promise<void> {
+    await this.deleteFromStore('people_profiles', id);
+  }
+
+  // Romantic Space (Private Encrypted)
+  public async saveRomanticSpace(space: RomanticSpace): Promise<void> {
+    await this.saveToStore('romantic_spaces', space);
+  }
+  public async getRomanticSpaces(userId: string): Promise<RomanticSpace[]> {
+    return this.getByUserIdFromStore<RomanticSpace>('romantic_spaces', userId);
+  }
+  public async deleteRomanticSpace(id: string): Promise<void> {
+    await this.deleteFromStore('romantic_spaces', id);
+  }
+
+  // Therapist Collaboration
+  public async saveTherapistCollaboration(collab: TherapistCollaboration): Promise<void> {
+    await this.saveToStore('therapist_collaborations', collab);
+  }
+  public async getTherapistCollaboration(userId: string): Promise<TherapistCollaboration | null> {
+    const list = await this.getByUserIdFromStore<TherapistCollaboration>('therapist_collaborations', userId);
+    return list.length > 0 ? list[0] : null;
+  }
+
+  // Body Observations (Non-medical)
+  public async saveBodyObservation(obs: BodyObservation): Promise<void> {
+    await this.saveToStore('body_observations', obs);
+  }
+  public async getBodyObservations(userId: string): Promise<BodyObservation[]> {
+    return this.getByUserIdFromStore<BodyObservation>('body_observations', userId);
+  }
+  public async deleteBodyObservation(id: string): Promise<void> {
+    await this.deleteFromStore('body_observations', id);
+  }
+
+  // Rest Records
+  public async saveRestRecord(record: RestRecord): Promise<void> {
+    await this.saveToStore('rest_records', record);
+  }
+  public async getRestRecords(userId: string): Promise<RestRecord[]> {
+    return this.getByUserIdFromStore<RestRecord>('rest_records', userId);
+  }
+  public async deleteRestRecord(id: string): Promise<void> {
+    await this.deleteFromStore('rest_records', id);
+  }
+
+  // Creativity Works (Play for play's sake)
+  public async saveCreativityWork(work: CreativityWork): Promise<void> {
+    await this.saveToStore('creativity_works', work);
+  }
+  public async getCreativityWorks(userId: string): Promise<CreativityWork[]> {
+    return this.getByUserIdFromStore<CreativityWork>('creativity_works', userId);
+  }
+  public async deleteCreativityWork(id: string): Promise<void> {
+    await this.deleteFromStore('creativity_works', id);
+  }
+
+  // Meaning & Values
+  public async saveMeaningEntry(entry: MeaningEntry): Promise<void> {
+    await this.saveToStore('meaning_entries', entry);
+  }
+  public async getMeaningEntries(userId: string): Promise<MeaningEntry[]> {
+    return this.getByUserIdFromStore<MeaningEntry>('meaning_entries', userId);
+  }
+  public async deleteMeaningEntry(id: string): Promise<void> {
+    await this.deleteFromStore('meaning_entries', id);
+  }
+
+  // Life Chapters (Life Story Engine)
+  public async saveLifeChapter(chapter: LifeChapter): Promise<void> {
+    await this.saveToStore('life_chapters', chapter);
+  }
+  public async getLifeChapters(userId: string): Promise<LifeChapter[]> {
+    return this.getByUserIdFromStore<LifeChapter>('life_chapters', userId);
+  }
+  public async deleteLifeChapter(id: string): Promise<void> {
+    await this.deleteFromStore('life_chapters', id);
+  }
+
+  // Letters to Self
+  public async saveLetterToSelf(letter: LetterToSelf): Promise<void> {
+    await this.saveToStore('letters_to_self', letter);
+  }
+  public async getLettersToSelf(userId: string): Promise<LetterToSelf[]> {
+    return this.getByUserIdFromStore<LetterToSelf>('letters_to_self', userId);
+  }
+  public async deleteLetterToSelf(id: string): Promise<void> {
+    await this.deleteFromStore('letters_to_self', id);
+  }
+
+  // Forgiveness Engine
+  public async saveForgivenessEntry(entry: ForgivenessEntry): Promise<void> {
+    await this.saveToStore('forgiveness_entries', entry);
+  }
+  public async getForgivenessEntries(userId: string): Promise<ForgivenessEntry[]> {
+    return this.getByUserIdFromStore<ForgivenessEntry>('forgiveness_entries', userId);
+  }
+  public async deleteForgivenessEntry(id: string): Promise<void> {
+    await this.deleteFromStore('forgiveness_entries', id);
+  }
+
+  // Grief & Loss Space
+  public async saveGriefEntry(entry: GriefEntry): Promise<void> {
+    await this.saveToStore('grief_entries', entry);
+  }
+  public async getGriefEntries(userId: string): Promise<GriefEntry[]> {
+    return this.getByUserIdFromStore<GriefEntry>('grief_entries', userId);
+  }
+  public async deleteGriefEntry(id: string): Promise<void> {
+    await this.deleteFromStore('grief_entries', id);
+  }
+
+  // Legacy Items (Mortality & Values)
+  public async saveLegacyItem(item: LegacyItem): Promise<void> {
+    await this.saveToStore('legacy_items', item);
+  }
+  public async getLegacyItems(userId: string): Promise<LegacyItem[]> {
+    return this.getByUserIdFromStore<LegacyItem>('legacy_items', userId);
+  }
+  public async deleteLegacyItem(id: string): Promise<void> {
+    await this.deleteFromStore('legacy_items', id);
+  }
+
+  // Heritage & Traditions
+  public async saveHeritageEntry(entry: HeritageEntry): Promise<void> {
+    await this.saveToStore('heritage_entries', entry);
+  }
+  public async getHeritageEntries(userId: string): Promise<HeritageEntry[]> {
+    return this.getByUserIdFromStore<HeritageEntry>('heritage_entries', userId);
+  }
+  public async deleteHeritageEntry(id: string): Promise<void> {
+    await this.deleteFromStore('heritage_entries', id);
+  }
+
+  // Nature Connection
+  public async saveNatureEntry(entry: NatureEntry): Promise<void> {
+    await this.saveToStore('nature_entries', entry);
+  }
+  public async getNatureEntries(userId: string): Promise<NatureEntry[]> {
+    return this.getByUserIdFromStore<NatureEntry>('nature_entries', userId);
+  }
+  public async deleteNatureEntry(id: string): Promise<void> {
+    await this.deleteFromStore('nature_entries', id);
+  }
+
+  // Contribution & Service
+  public async saveContributionEntry(entry: ContributionEntry): Promise<void> {
+    await this.saveToStore('contribution_entries', entry);
+  }
+  public async getContributionEntries(userId: string): Promise<ContributionEntry[]> {
+    return this.getByUserIdFromStore<ContributionEntry>('contribution_entries', userId);
+  }
+  public async deleteContributionEntry(id: string): Promise<void> {
+    await this.deleteFromStore('contribution_entries', id);
+  }
+
+  // Decision Workspaces
+  public async saveDecisionWorkspace(ws: DecisionWorkspace): Promise<void> {
+    await this.saveToStore('decision_workspaces', ws);
+  }
+  public async getDecisionWorkspaces(userId: string): Promise<DecisionWorkspace[]> {
+    return this.getByUserIdFromStore<DecisionWorkspace>('decision_workspaces', userId);
+  }
+  public async deleteDecisionWorkspace(id: string): Promise<void> {
+    await this.deleteFromStore('decision_workspaces', id);
+  }
+
+  // Joy & Savoring Entries
+  public async saveJoySavoringEntry(entry: JoySavoringEntry): Promise<void> {
+    await this.saveToStore('joy_savoring_entries', entry);
+  }
+  public async getJoySavoringEntries(userId: string): Promise<JoySavoringEntry[]> {
+    return this.getByUserIdFromStore<JoySavoringEntry>('joy_savoring_entries', userId);
+  }
+  public async deleteJoySavoringEntry(id: string): Promise<void> {
+    await this.deleteFromStore('joy_savoring_entries', id);
+  }
+
+  // Digital Self Profile
+  public async saveDigitalSelfProfile(profile: DigitalSelfProfile): Promise<void> {
+    await this.saveToStore('digital_self_profile', { id: profile.userId, ...profile });
+  }
+  public async getDigitalSelfProfile(userId: string): Promise<DigitalSelfProfile | null> {
+    const list = await this.getByUserIdFromStore<any>('digital_self_profile', userId);
+    return list.length > 0 ? list[0] : null;
+  }
+
+  // AI Memory Proposals (SAVE / EDIT / DISMISS)
+  public async saveAIMemoryProposal(proposal: AIMemoryProposal): Promise<void> {
+    await this.saveToStore('ai_memory_proposals', proposal);
+  }
+  public async getAIMemoryProposals(userId: string): Promise<AIMemoryProposal[]> {
+    return this.getByUserIdFromStore<AIMemoryProposal>('ai_memory_proposals', userId);
+  }
+  public async deleteAIMemoryProposal(id: string): Promise<void> {
+    await this.deleteFromStore('ai_memory_proposals', id);
+  }
+
+  // Shared Resources (Revocable & Scoped)
+  public async saveSharedResource(resource: SharedResourceRecord): Promise<void> {
+    const db = await this.getDB();
+    const transaction = db.transaction('shared_resources', 'readwrite');
+    const store = transaction.objectStore('shared_resources');
+    store.put(resource);
+  }
+  public async getSharedResources(ownerId: string): Promise<SharedResourceRecord[]> {
+    const db = await this.getDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction('shared_resources', 'readonly');
+      const store = transaction.objectStore('shared_resources');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const all = (request.result as SharedResourceRecord[]) || [];
+        resolve(all.filter(r => r.ownerId === ownerId));
+      };
+      request.onerror = () => resolve([]);
+    });
+  }
+
+  // Agent Action Logs (Audit Trail)
+  public async saveAgentActionLog(log: AgentActionLog): Promise<void> {
+    const db = await this.getDB();
+    const transaction = db.transaction('agent_action_logs', 'readwrite');
+    const store = transaction.objectStore('agent_action_logs');
+    store.put(log);
+  }
+  public async getAgentActionLogs(): Promise<AgentActionLog[]> {
+    const db = await this.getDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction('agent_action_logs', 'readonly');
+      const store = transaction.objectStore('agent_action_logs');
+      const request = store.getAll();
+      request.onsuccess = () => resolve((request.result as AgentActionLog[]) || []);
+      request.onerror = () => resolve([]);
+    });
+  }
+
+  // --- PERSONAL LIFE INTELLIGENCE LAYER ACCESSORS ---
+
+  // 1. Life Knowledge Vault
+  public async saveKnowledgeItem(item: LifeKnowledgeItem): Promise<void> {
+    await this.saveToStore('knowledge_vault', item);
+  }
+  public async getKnowledgeItems(userId: string): Promise<LifeKnowledgeItem[]> {
+    return this.getByUserIdFromStore<LifeKnowledgeItem>('knowledge_vault', userId);
+  }
+  public async deleteKnowledgeItem(id: string): Promise<void> {
+    await this.deleteFromStore('knowledge_vault', id);
+  }
+
+  // Lesson Extraction Proposals
+  public async saveLessonProposal(proposal: LessonProposal): Promise<void> {
+    await this.saveToStore('lesson_proposals', proposal);
+  }
+  public async getLessonProposals(userId: string): Promise<LessonProposal[]> {
+    return this.getByUserIdFromStore<LessonProposal>('lesson_proposals', userId);
+  }
+  public async deleteLessonProposal(id: string): Promise<void> {
+    await this.deleteFromStore('lesson_proposals', id);
+  }
+
+  // 2. Life Patterns Discovery
+  public async savePatternObservation(pattern: PatternObservation): Promise<void> {
+    await this.saveToStore('pattern_observations', pattern);
+  }
+  public async getPatternObservations(userId: string): Promise<PatternObservation[]> {
+    return this.getByUserIdFromStore<PatternObservation>('pattern_observations', userId);
+  }
+  public async deletePatternObservation(id: string): Promise<void> {
+    await this.deleteFromStore('pattern_observations', id);
+  }
+
+  // 3. Contradictions & Memory Reconciliation
+  public async saveContradictionRecord(record: ContradictionRecord): Promise<void> {
+    await this.saveToStore('contradiction_records', record);
+  }
+  public async getContradictionRecords(userId: string): Promise<ContradictionRecord[]> {
+    return this.getByUserIdFromStore<ContradictionRecord>('contradiction_records', userId);
+  }
+  public async deleteContradictionRecord(id: string): Promise<void> {
+    await this.deleteFromStore('contradiction_records', id);
+  }
+
+  // 4. Opportunities & Unfinished Business
+  public async saveOpportunityItem(item: OpportunityItem): Promise<void> {
+    await this.saveToStore('opportunity_items', item);
+  }
+  public async getOpportunityItems(userId: string): Promise<OpportunityItem[]> {
+    return this.getByUserIdFromStore<OpportunityItem>('opportunity_items', userId);
+  }
+  public async deleteOpportunityItem(id: string): Promise<void> {
+    await this.deleteFromStore('opportunity_items', id);
+  }
+
+  public async saveUnfinishedItem(item: UnfinishedItem): Promise<void> {
+    await this.saveToStore('unfinished_items', item);
+  }
+  public async getUnfinishedItems(userId: string): Promise<UnfinishedItem[]> {
+    return this.getByUserIdFromStore<UnfinishedItem>('unfinished_items', userId);
+  }
+  public async deleteUnfinishedItem(id: string): Promise<void> {
+    await this.deleteFromStore('unfinished_items', id);
+  }
+
+  // 5. Decision Journal & Learning
+  public async saveDecisionRecord(decision: DecisionRecord): Promise<void> {
+    await this.saveToStore('enhanced_decisions', decision);
+  }
+  public async getDecisionRecords(userId: string): Promise<DecisionRecord[]> {
+    return this.getByUserIdFromStore<DecisionRecord>('enhanced_decisions', userId);
+  }
+  public async deleteDecisionRecord(id: string): Promise<void> {
+    await this.deleteFromStore('enhanced_decisions', id);
+  }
+
+  // 6. Personal Briefings
+  public async savePersonalBriefing(briefing: PersonalBriefing): Promise<void> {
+    await this.saveToStore('personal_briefings', briefing);
+  }
+  public async getPersonalBriefings(userId: string): Promise<PersonalBriefing[]> {
+    return this.getByUserIdFromStore<PersonalBriefing>('personal_briefings', userId);
+  }
+
+  // 7. Memory Moments & Resurfacing Rules
+  public async saveMemoryMoment(moment: MemoryMoment): Promise<void> {
+    await this.saveToStore('memory_moments', moment);
+  }
+  public async getMemoryMoments(userId: string): Promise<MemoryMoment[]> {
+    return this.getByUserIdFromStore<MemoryMoment>('memory_moments', userId);
+  }
+  public async deleteMemoryMoment(id: string): Promise<void> {
+    await this.deleteFromStore('memory_moments', id);
+  }
+
+  public async saveResurfacingRule(rule: ResurfacingRule): Promise<void> {
+    await this.saveToStore('resurfacing_rules', rule);
+  }
+  public async getResurfacingRule(userId: string): Promise<ResurfacingRule | null> {
+    const list = await this.getByUserIdFromStore<ResurfacingRule>('resurfacing_rules', userId);
+    return list.length > 0 ? list[0] : null;
+  }
+
+  // 8. Future Self Studio & Scenarios
+  public async saveFutureSelfProfile(profile: FutureSelfProfile): Promise<void> {
+    await this.saveToStore('future_self_profiles', profile);
+  }
+  public async getFutureSelfProfile(userId: string): Promise<FutureSelfProfile | null> {
+    const list = await this.getByUserIdFromStore<FutureSelfProfile>('future_self_profiles', userId);
+    return list.length > 0 ? list[0] : null;
+  }
+
+  public async saveScenarioSimulation(sim: ScenarioSimulation): Promise<void> {
+    await this.saveToStore('scenario_simulations', sim);
+  }
+  public async getScenarioSimulations(userId: string): Promise<ScenarioSimulation[]> {
+    return this.getByUserIdFromStore<ScenarioSimulation>('scenario_simulations', userId);
+  }
+
+  // 9. Personal Experiments
+  public async savePersonalExperiment(exp: PersonalExperiment): Promise<void> {
+    await this.saveToStore('personal_experiments', exp);
+  }
+  public async getPersonalExperiments(userId: string): Promise<PersonalExperiment[]> {
+    return this.getByUserIdFromStore<PersonalExperiment>('personal_experiments', userId);
+  }
+  public async deletePersonalExperiment(id: string): Promise<void> {
+    await this.deleteFromStore('personal_experiments', id);
+  }
+
+  // 10. Life Reviews & Annual Life Books
+  public async saveLifeReview(review: LifeReviewRecord): Promise<void> {
+    await this.saveToStore('life_review_records', review);
+  }
+  public async getLifeReviews(userId: string): Promise<LifeReviewRecord[]> {
+    return this.getByUserIdFromStore<LifeReviewRecord>('life_review_records', userId);
+  }
+
+  public async saveAnnualLifeBook(book: AnnualLifeBook): Promise<void> {
+    await this.saveToStore('annual_life_books', { id: `${book.userId}_${book.year}`, ...book });
+  }
+  public async getAnnualLifeBooks(userId: string): Promise<AnnualLifeBook[]> {
+    return this.getByUserIdFromStore<AnnualLifeBook>('annual_life_books', userId);
+  }
+
+  // 11. AI Access Policies
+  public async saveAIAccessPolicy(policy: AIAccessPolicy): Promise<void> {
+    await this.saveToStore('ai_access_policies', { id: policy.userId, ...policy });
+  }
+  public async getAIAccessPolicy(userId: string): Promise<AIAccessPolicy | null> {
+    const list = await this.getByUserIdFromStore<any>('ai_access_policies', userId);
+    return list.length > 0 ? list[0] : null;
   }
 }
 

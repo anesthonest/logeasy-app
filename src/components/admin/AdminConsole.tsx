@@ -418,7 +418,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">LogEasy Admin Console</h2>
               <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-mono border border-amber-500/20">
-                {session?.adminUser.role.toUpperCase().replace('_', ' ')}
+                {(session?.adminUser?.role || 'admin').toUpperCase().replace('_', ' ')}
               </span>
             </div>
             <p className="text-[10px] text-gray-400 font-sans mt-0.5">

@@ -21,6 +21,7 @@
         "aiProcessingStatus": { "type": "string" },
         "categories": { "type": "array" },
         "tags": { "type": "array" },
+        "colorTags": { "type": "array" },
         "location": { "type": "string" },
         "favorite": { "type": "boolean" },
         "archived": { "type": "boolean" },

@@ -565,7 +565,7 @@ Only return JSON. Do not write explanations outside the JSON block.`;
     const uniqueTags = Array.from(new Set(entries.flatMap(e => e.tags || [])));
     const uniqueCats = Array.from(new Set(entries.flatMap(e => e.categories || [])));
 
-    return `### Local ${scope.replace(/^\w/, c => c.toUpperCase())} Synthesis
+    return `### Local ${(scope || 'timeline').replace(/^\w/, c => c.toUpperCase())} Synthesis
 **Time Range Statistics:**
 - **Vocal Logs Filed:** ${totalEntries}
 - **Average Mood Score:** ${avgMood}/10

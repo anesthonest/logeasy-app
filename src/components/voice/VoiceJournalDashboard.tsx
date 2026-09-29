@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, Calendar, Search, LayoutGrid, HardDrive, Cpu, Shield, 
   Settings, User, CheckCircle, RefreshCw, CircleAlert, Sparkles, FolderClosed
@@ -12,7 +12,7 @@ import { notificationManager } from '../../core/notifications/notification_manag
 import { logger } from '../../core/analytics/logger';
 
 // Sub-components
-import { Folder, SearchFilter, SavedSearch } from './VoiceJournalTypes';
+import { Folder, SearchFilter, SavedSearch, ColorTag } from './VoiceJournalTypes';
 import VoiceRecorderCard from './VoiceRecorderCard';
 import TranscriptEditor from './TranscriptEditor';
 import TimelineView from './TimelineView';
@@ -22,9 +22,15 @@ import AudioDashboard from './AudioDashboard';
 
 interface VoiceJournalDashboardProps {
   userId: string;
+  filteredEntries?: LocalJournalEntry[];
+  onEntriesChanged?: () => void;
 }
 
-export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardProps) {
+export default function VoiceJournalDashboard({ 
+  userId,
+  filteredEntries,
+  onEntriesChanged
+}: VoiceJournalDashboardProps) {
   // Database states
   const [entries, setEntries] = useState<LocalJournalEntry[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -45,6 +51,17 @@ export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardP
   // Screen layout state
   const [showRecorder, setShowRecorder] = useState(false);
 
+  // Sync entries whenever filteredEntries prop changes
+  useEffect(() => {
+    if (filteredEntries !== undefined) {
+      let list = filteredEntries.filter(entry => !entry.deleted);
+      if (selectedFolderId !== null) {
+        list = list.filter(entry => entry.folderId === selectedFolderId);
+      }
+      setEntries(list);
+    }
+  }, [filteredEntries, selectedFolderId]);
+
   // Load database structures on boot
   useEffect(() => {
     loadDatabase();
@@ -52,18 +69,26 @@ export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardP
 
   const loadDatabase = async () => {
     try {
-      // 1. Fetch entries
-      let list = await localDB.getJournalEntries(userId);
-      
-      // Filter out deleted/trash unless requested
-      list = list.filter(entry => !entry.deleted);
+      if (filteredEntries !== undefined) {
+        let list = filteredEntries.filter(entry => !entry.deleted);
+        if (selectedFolderId !== null) {
+          list = list.filter(entry => entry.folderId === selectedFolderId);
+        }
+        setEntries(list);
+      } else {
+        // 1. Fetch entries
+        let list = await localDB.getJournalEntries(userId);
+        
+        // Filter out deleted/trash unless requested
+        list = list.filter(entry => !entry.deleted);
 
-      // If a folder is selected, filter by folder
-      if (selectedFolderId !== null) {
-        list = list.filter(entry => entry.folderId === selectedFolderId);
+        // If a folder is selected, filter by folder
+        if (selectedFolderId !== null) {
+          list = list.filter(entry => entry.folderId === selectedFolderId);
+        }
+
+        setEntries(list);
       }
-
-      setEntries(list);
 
       // 2. Fetch custom folders from preferences
       const storedFolders = await localDB.getPreference<Folder[]>('user_folders');
@@ -125,7 +150,11 @@ export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardP
       moodScore: 8,
       moodLabel: 'Productive',
       categories: ['Voice Journal'],
-      tags: ['audio', 'clean'],
+      tags: ['audio', 'voice note'],
+      colorTags: [
+        { name: 'Voice Note', color: '#06b6d4' },
+        { name: 'Audio', color: '#6366f1' }
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       syncStatus: 'pending_create',
@@ -162,6 +191,7 @@ export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardP
 
       setShowRecorder(false);
       await loadDatabase();
+      onEntriesChanged?.();
       setSelectedEntry(newEntry);
     } catch (err) {
       logger.error('VoiceDashboard', 'Failed writing captured snippet', err);
@@ -223,6 +253,7 @@ export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardP
 
       // Reload
       await loadDatabase();
+      onEntriesChanged?.();
     } catch (err) {
       logger.error('VoiceDashboard', 'Failed saving entry updates', err);
     }
@@ -253,6 +284,7 @@ export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardP
         attempts: 0
       });
       if (syncEngine.getStatus().isOnline) syncEngine.processSyncQueue();
+      onEntriesChanged?.();
     } catch (err) {
       logger.error('VoiceDashboard', 'Favorite toggle crashed', err);
     }
@@ -338,6 +370,7 @@ export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardP
         });
         if (syncEngine.getStatus().isOnline) syncEngine.processSyncQueue();
         await loadDatabase();
+        onEntriesChanged?.();
       } catch (err) {
         logger.error('VoiceDashboard', 'Delete crashed', err);
       }
@@ -370,6 +403,7 @@ export default function VoiceJournalDashboard({ userId }: VoiceJournalDashboardP
       });
       if (syncEngine.getStatus().isOnline) syncEngine.processSyncQueue();
       await loadDatabase();
+      onEntriesChanged?.();
       setSelectedEntry(dup);
     } catch (err) {
       logger.error('VoiceDashboard', 'Duplication failed', err);
@@ -552,7 +586,8 @@ Exported secure-vault file compiled from LogEasy.`;
       list = list.filter(e => 
         (e.title || '').toLowerCase().includes(q) || 
         e.transcript.toLowerCase().includes(q) ||
-        (e.tags || []).some(t => t.toLowerCase().includes(q))
+        (e.tags || []).some(t => t.toLowerCase().includes(q)) ||
+        (e.colorTags || []).some(ct => ct.name.toLowerCase().includes(q))
       );
     }
 
@@ -568,7 +603,12 @@ Exported secure-vault file compiled from LogEasy.`;
 
     // Tag list matches (AND operation)
     if (filter.tags.length > 0) {
-      list = list.filter(e => filter.tags.every(t => (e.tags || []).includes(t)));
+      list = list.filter(e => filter.tags.every(t => {
+        const lowerT = t.toLowerCase();
+        const tagMatch = (e.tags || []).some(existingTag => existingTag.toLowerCase() === lowerT);
+        const colorTagMatch = (e.colorTags || []).some(ct => ct.name.toLowerCase() === lowerT);
+        return tagMatch || colorTagMatch;
+      }));
     }
 
     // Category matches
@@ -607,9 +647,42 @@ Exported secure-vault file compiled from LogEasy.`;
   const totalStorageBytes = entries.reduce((acc, curr) => acc + (curr.fileSize || 0), 0);
   const totalAudioDuration = entries.reduce((acc, curr) => acc + (curr.audioDuration || 0), 0);
 
-  // Generate lists for tag filters from entries
-  const availableTags: string[] = Array.from(new Set(entries.flatMap(e => (e.tags || []) as string[]))) as string[];
+  // Generate color-coded and regular tag lists for retrieval filters
+  const availableColorTags: ColorTag[] = useMemo(() => {
+    const map = new Map<string, ColorTag>();
+    entries.forEach((e) => {
+      if (e.colorTags) {
+        e.colorTags.forEach((ct) => {
+          if (!map.has(ct.name.toLowerCase())) {
+            map.set(ct.name.toLowerCase(), ct);
+          }
+        });
+      }
+      if (e.tags) {
+        e.tags.forEach((t) => {
+          if (!map.has(t.toLowerCase())) {
+            map.set(t.toLowerCase(), { name: t, color: '#06b6d4' });
+          }
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [entries]);
+
+  const availableTags: string[] = Array.from(
+    new Set([
+      ...availableColorTags.map((ct) => ct.name),
+      ...entries.flatMap((e) => (e.tags || []) as string[]),
+    ])
+  );
   const availableCategories: string[] = Array.from(new Set(entries.flatMap(e => (e.categories || []) as string[]))) as string[];
+
+  const handleTagQuickFilter = (tag: string) => {
+    setFilter((prev) => ({
+      ...prev,
+      tags: prev.tags.includes(tag) ? prev.tags : [...prev.tags, tag],
+    }));
+  };
 
   return (
     <div className="flex-1 flex flex-col xl:flex-row gap-6 min-h-0">
@@ -669,6 +742,7 @@ Exported secure-vault file compiled from LogEasy.`;
             onDeleteSavedSearch={handleDeleteSavedSearch}
             availableTags={availableTags}
             availableCategories={availableCategories}
+            availableColorTags={availableColorTags}
           />
 
           {/* Timeline scroll container */}
@@ -686,6 +760,7 @@ Exported secure-vault file compiled from LogEasy.`;
               onMoveToFolder={handleMoveToFolder}
               onExport={handleExport}
               onShare={handleShare}
+              onTagClick={handleTagQuickFilter}
             />
           </div>
         </div>

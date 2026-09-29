@@ -6,9 +6,15 @@ export interface Folder {
   color?: string;
 }
 
+export interface ColorTag {
+  name: string;
+  color: string;
+}
+
 export interface Tag {
   name: string;
   count: number;
+  color?: string;
 }
 
 export interface SearchFilter {

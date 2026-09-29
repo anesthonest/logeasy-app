@@ -212,15 +212,35 @@ export default function HomeDashboard({
                     {entry.transcript}
                   </p>
 
-                  <div className="flex items-center gap-2 pt-2 text-[10px]">
+                  <div className="flex flex-wrap items-center gap-2 pt-2 text-[10px]">
                     <span className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full font-semibold">
                       Mood: {entry.moodScore}/10
                     </span>
-                    {entry.categories && entry.categories.map((cat, i) => (
-                      <span key={i} className="text-gray-500 font-medium bg-gray-500/5 border border-gray-500/10 px-1.5 rounded">
-                        #{cat}
-                      </span>
-                    ))}
+                    {entry.colorTags && entry.colorTags.length > 0 ? (
+                      entry.colorTags.map((tag, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-semibold border"
+                          style={{
+                            backgroundColor: `${tag.color}15`,
+                            borderColor: `${tag.color}35`,
+                            color: tag.color,
+                          }}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          #{tag.name}
+                        </span>
+                      ))
+                    ) : (
+                      entry.categories && entry.categories.map((cat, i) => (
+                        <span key={i} className="text-gray-500 font-medium bg-gray-500/5 border border-gray-500/10 px-1.5 rounded">
+                          #{cat}
+                        </span>
+                      ))
+                    )}
                   </div>
                 </div>
               ))

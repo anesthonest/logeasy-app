@@ -228,6 +228,7 @@ class SyncEngine {
             aiProcessingStatus: localRecord.aiProcessingStatus || 'idle',
             categories: localRecord.categories || [],
             tags: localRecord.tags || [],
+            colorTags: localRecord.colorTags || [],
             location: localRecord.location || '',
             favorite: !!localRecord.favorite,
             archived: !!localRecord.archived,
