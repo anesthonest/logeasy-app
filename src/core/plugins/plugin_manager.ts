@@ -1,4 +1,5 @@
 import { logger } from '../analytics/logger';
+import { notificationManager } from '../notifications/notification_manager';
 
 // ============================================================================
 // MODULAR PLUGIN DEFINITIONS
@@ -149,7 +150,7 @@ class PluginManager {
       if (!dep || dep.state !== 'enabled') {
         const errMsg = `Plugin Resolution Error: Cannot enable '${plugin.meta.name}'. Requires active dependent plugin '${depId}'`;
         logger.error('PluginManager', errMsg);
-        alert(errMsg);
+        notificationManager.addNotification({ title: 'Plugin Error', body: errMsg, type: 'conflict' });
         return false;
       }
     }
@@ -158,7 +159,7 @@ class PluginManager {
     if (!this.checkVersionCompatibility(plugin.meta.requiredAppVersion)) {
       const errMsg = `Plugin Version Mismatch: '${plugin.meta.name}' requires App version ${plugin.meta.requiredAppVersion}. Current: ${this.currentAppVersion}`;
       logger.error('PluginManager', errMsg);
-      alert(errMsg);
+      notificationManager.addNotification({ title: 'Plugin Version Error', body: errMsg, type: 'conflict' });
       return false;
     }
 
@@ -185,7 +186,7 @@ class PluginManager {
       if (other.state === 'enabled' && other.meta.dependencies.includes(id)) {
         const errMsg = `Plugin Conflict: Cannot disable '${plugin.meta.name}' as active plugin '${other.meta.name}' depends on it.`;
         logger.error('PluginManager', errMsg);
-        alert(errMsg);
+        notificationManager.addNotification({ title: 'Plugin Conflict', body: errMsg, type: 'conflict' });
         return false;
       }
     }

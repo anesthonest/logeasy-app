@@ -4,7 +4,8 @@ import {
   Activity, Shield, Database, Wifi, WifiOff, HardDrive, Mic, Square, Play, Pause,
   RefreshCw, Sliders, Settings, Terminal, Bell, User, LogIn, LogOut, Key, CheckCircle,
   AlertTriangle, Cpu, FileText, Trash2, Volume2, Lock, Moon, Sun, Eye, Heart, Info, Globe, HelpCircle, EyeOff, TrendingUp, Gem, ShieldAlert,
-  Flame, ArrowRight, ChevronRight, Sparkles, Calendar, BookOpen, Clock, LayoutGrid, Check, Plus, Search, X
+  Flame, ArrowRight, ChevronRight, Sparkles, Calendar, BookOpen, Clock, LayoutGrid, Check, Plus, Search, X,
+  Zap, Network, Archive, Compass
 } from 'lucide-react';
 
 // Core Imports
@@ -28,10 +29,32 @@ import SimpleInsightsDashboard from './components/voice/SimpleInsightsDashboard'
 import ProfileSettingsConsole from './components/voice/ProfileSettingsConsole';
 import ColorTagPicker, { ColorTagBadge, DEFAULT_SUGGESTED_TAGS } from './components/voice/ColorTagPicker';
 
+// Master Intelligence Components
+import ConnectionsView from './components/voice/ConnectionsView';
+import LifePatternsHub from './components/voice/LifePatternsHub';
+import MyLifeArchiveHub from './components/voice/MyLifeArchiveHub';
+import SoftConsistencyHub from './components/voice/SoftConsistencyHub';
+import EmotionalTimeTravelHub from './components/voice/EmotionalTimeTravelHub';
+import AgentDiagnosticsDashboard from './components/voice/AgentDiagnosticsDashboard';
+import InstantCaptureModal from './components/voice/InstantCaptureModal';
+
 // Optimized code-splitting for large secondary views
 const HIOSDashboard = React.lazy(() => import('./components/voice/HIOSDashboard'));
 const AIReflectionCoach = React.lazy(() => import('./components/voice/AIReflectionCoach'));
 const OnboardingWizard = React.lazy(() => import('./components/voice/OnboardingWizard'));
+
+export type MainTab = 
+  | 'home' 
+  | 'journal' 
+  | 'connections' 
+  | 'patterns' 
+  | 'habits' 
+  | 'timetravel' 
+  | 'archive' 
+  | 'insights' 
+  | 'coach' 
+  | 'diagnostics' 
+  | 'profile';
 
 export default function App() {
   // State Subscriptions
@@ -43,11 +66,12 @@ export default function App() {
   const [localEntries, setLocalEntries] = useState<LocalJournalEntry[]>([]);
   
   // Navigation
-  const [activeTab, setActiveTab] = useState<'home' | 'journal' | 'insights' | 'coach' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<MainTab>('home');
   const [activeProfileSection, setActiveProfileSection] = useState<'auth' | 'monetization' | 'security' | 'database' | 'diagnostics' | 'ai_sandbox' | 'admin' | 'settings'>('settings');
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return localStorage.getItem('logeasy_onboarded') !== 'true';
   });
+  const [showInstantCaptureModal, setShowInstantCaptureModal] = useState(false);
   const [devModeActive, setDevModeActive] = useState(() => {
     return localStorage.getItem('logeasy_dev_mode') === 'true';
   });
@@ -352,7 +376,11 @@ export default function App() {
     }
 
     if (!journalText.trim()) {
-      alert('Spoken transcript content cannot be empty.');
+      notificationManager.addNotification({
+        title: 'Empty Transcript',
+        body: 'Spoken transcript content cannot be empty.',
+        type: 'conflict',
+      });
       return;
     }
 
@@ -456,7 +484,11 @@ export default function App() {
     
     if (!sourceText) {
       logger.warn('AISandbox', 'No voice transcription material detected for analysis.');
-      alert('Please type text, record voice, or save a journal first to provide transcript insights.');
+      notificationManager.addNotification({
+        title: 'Input Needed',
+        body: 'Please type text, record voice, or save a journal first to provide transcript insights.',
+        type: 'reminder',
+      });
       return;
     }
 
@@ -510,6 +542,15 @@ export default function App() {
         {/* Live Subsystem Indicators */}
         <div className="flex items-center gap-2 md:gap-3">
           
+          {/* Instant Capture Quick Trigger */}
+          <button
+            onClick={() => setShowInstantCaptureModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 hover:from-cyan-500/30 hover:to-indigo-500/30 border border-cyan-500/35 text-cyan-300 rounded-xl text-[11px] font-bold cursor-pointer transition-all shadow-sm"
+          >
+            <Zap className="h-3.5 w-3.5 text-cyan-400" />
+            <span>Instant Capture</span>
+          </button>
+
           {/* Network Toggle Simulator */}
           <button 
             onClick={toggleNetwork}
@@ -589,8 +630,14 @@ export default function App() {
           {[
             { id: 'home', label: 'Home Dashboard', icon: LayoutGrid },
             { id: 'journal', label: 'Spoken Journal', icon: BookOpen, tag: localEntries.length > 0 ? `${localEntries.length}` : undefined },
+            { id: 'connections', label: 'Connections', icon: Network },
+            { id: 'patterns', label: 'Life Patterns', icon: Activity },
+            { id: 'habits', label: 'Soft Consistency', icon: Heart },
+            { id: 'timetravel', label: 'Time Travel & Journeys', icon: Clock },
+            { id: 'archive', label: 'My Life Archive', icon: Archive },
             { id: 'insights', label: 'HIOS Operating System', icon: Cpu },
             { id: 'coach', label: 'Reflection Coach', icon: Sparkles },
+            { id: 'diagnostics', label: 'Agent Diagnostics', icon: Terminal },
             { id: 'profile', label: 'Private Profile', icon: User },
           ].map((item) => {
             const Icon = item.icon;
@@ -637,8 +684,9 @@ export default function App() {
                   localEntries={localEntries}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onSelectEntry={(entry) => {
-                    // Selecting entry redirects user to timeline dashboard view
+                    setActiveTab('journal');
                   }}
+                  onOpenInstantCapture={() => setShowInstantCaptureModal(true)}
                 />
               )}
 
@@ -812,9 +860,13 @@ export default function App() {
                                 onClick={() => {
                                   if (authEmail) {
                                     authService.sendPasswordResetEmail(authEmail);
-                                    alert(`Password recovery link dispatched to ${authEmail}`);
+                                    notificationManager.addNotification({
+                                      title: 'Password Recovery',
+                                      body: `Password recovery link dispatched to ${authEmail}`,
+                                      type: 'reminder',
+                                    });
                                   } else {
-                                    alert('Please specify your email first.');
+                                    setAuthError('Please specify your email address first.');
                                   }
                                 }}
                                 className="text-[11px] text-cyan-400 text-right block ml-auto mt-1"
@@ -1224,18 +1276,75 @@ export default function App() {
                   )}
                 />
               )}
+
+              {/* TAB 6: INTELLIGENT CONNECTIONS */}
+              {activeTab === 'connections' && (
+                <ConnectionsView userId={session.user?.uid || 'guest_user'} />
+              )}
+
+              {/* TAB 7: LIFE PATTERNS VIEW */}
+              {activeTab === 'patterns' && (
+                <LifePatternsHub userId={session.user?.uid || 'guest_user'} />
+              )}
+
+              {/* TAB 8: SOFT CONSISTENCY SUPPORT */}
+              {activeTab === 'habits' && (
+                <SoftConsistencyHub userId={session.user?.uid || 'guest_user'} />
+              )}
+
+              {/* TAB 9: EMOTIONAL TIME TRAVEL & LIFE JOURNEYS */}
+              {activeTab === 'timetravel' && (
+                <EmotionalTimeTravelHub userId={session.user?.uid || 'guest_user'} />
+              )}
+
+              {/* TAB 10: MY LIFE ARCHIVE */}
+              {activeTab === 'archive' && (
+                <MyLifeArchiveHub userId={session.user?.uid || 'guest_user'} />
+              )}
+
+              {/* TAB 11: AI AGENT DIAGNOSTICS */}
+              {activeTab === 'diagnostics' && (
+                <AgentDiagnosticsDashboard userId={session.user?.uid || 'guest_user'} />
+              )}
             </motion.div>
           </AnimatePresence>
         </section>
       </main>
 
       {/* RESPONSIVE BOTTOM NAVIGATION BAR (MOBILE/TABLET ONLY) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/10 backdrop-blur-md bg-opacity-95 bg-[#0b0f19] flex justify-around py-2.5 select-none shadow-lg">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/10 backdrop-blur-md bg-opacity-95 bg-[#0b0f19] flex justify-around py-2 select-none shadow-lg items-center">
         {[
           { id: 'home', label: 'Home', icon: LayoutGrid },
           { id: 'journal', label: 'Journal', icon: BookOpen },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => { setActiveTab(item.id as any); speakHelpText(`${item.label} Tab Selected`); }}
+              className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
+                isActive ? 'text-cyan-400' : 'text-gray-400'
+              }`}
+            >
+              <Icon className="h-4.5 w-4.5" />
+              <span className="text-[10px] font-bold font-sans">{item.label}</span>
+            </button>
+          );
+        })}
+
+        {/* Center Floating Instant Capture */}
+        <button
+          onClick={() => setShowInstantCaptureModal(true)}
+          className="p-2.5 rounded-full bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 -mt-3 border-2 border-[#0b0f19] cursor-pointer"
+          title="Instant Capture"
+        >
+          <Zap className="h-5 w-5 fill-white" />
+        </button>
+
+        {[
+          { id: 'connections', label: 'Links', icon: Network },
           { id: 'insights', label: 'HIOS', icon: Cpu },
-          { id: 'coach', label: 'Coach', icon: Sparkles },
           { id: 'profile', label: 'Profile', icon: User },
         ].map((item) => {
           const Icon = item.icon;
@@ -1248,7 +1357,7 @@ export default function App() {
                 isActive ? 'text-cyan-400' : 'text-gray-400'
               }`}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-4.5 w-4.5" />
               <span className="text-[10px] font-bold font-sans">{item.label}</span>
             </button>
           );
@@ -1324,6 +1433,16 @@ export default function App() {
           </React.Suspense>
         )}
       </AnimatePresence>
+
+      {/* INSTANT CAPTURE MODAL (FEATURE THREE) */}
+      <InstantCaptureModal
+        userId={session.user?.uid || 'guest_user'}
+        isOpen={showInstantCaptureModal}
+        onClose={() => setShowInstantCaptureModal(false)}
+        onCaptured={(_newEntry) => {
+          reloadLocalEntries();
+        }}
+      />
 
     </div>
   );

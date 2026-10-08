@@ -1,23 +1,27 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { 
-  Mic, Clock, Heart, Flame, Calendar, ArrowRight, BookOpen, Sparkles, TrendingUp, HelpCircle
+  Mic, Clock, Heart, Flame, Calendar, ArrowRight, BookOpen, Sparkles, TrendingUp, HelpCircle,
+  Zap, Network, Activity, Archive
 } from 'lucide-react';
 import { LocalJournalEntry } from '../../core/database/local_db';
 import { AuthSession } from '../../features/auth/auth_service';
+import DailyRitualsCard from './DailyRitualsCard';
 
 interface HomeDashboardProps {
   session: AuthSession;
   localEntries: LocalJournalEntry[];
-  onNavigateTab: (tab: 'home' | 'journal' | 'insights' | 'coach' | 'profile') => void;
+  onNavigateTab: (tab: any) => void;
   onSelectEntry: (entry: LocalJournalEntry) => void;
+  onOpenInstantCapture?: () => void;
 }
 
 export default function HomeDashboard({ 
   session, 
   localEntries, 
   onNavigateTab,
-  onSelectEntry
+  onSelectEntry,
+  onOpenInstantCapture
 }: HomeDashboardProps) {
   
   // Greeting helper
@@ -41,14 +45,6 @@ export default function HomeDashboard({
     });
   };
 
-  // Streak Calculation
-  const getStreak = () => {
-    if (localEntries.length === 0) return 0;
-    // Simulate streak for nice visual
-    return Math.min(localEntries.length + 2, 5); 
-  };
-
-  const streak = getStreak();
   const latestEntry = localEntries.length > 0 ? localEntries[0] : null;
 
   return (
@@ -64,48 +60,56 @@ export default function HomeDashboard({
           </p>
         </div>
 
-        <button
-          onClick={() => onNavigateTab('journal')}
-          className="flex items-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:opacity-95 text-white font-bold rounded-2xl shadow-lg shadow-cyan-950/20 text-xs transition-all cursor-pointer self-start md:self-center shrink-0"
-        >
-          <Mic className="h-4.5 w-4.5" />
-          <span>Record Voice Journal</span>
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
+          {onOpenInstantCapture && (
+            <button
+              onClick={onOpenInstantCapture}
+              className="flex items-center gap-2 px-4 py-3.5 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold rounded-2xl text-xs transition-all cursor-pointer shadow-sm"
+            >
+              <Zap className="h-4 w-4 text-cyan-400" />
+              <span>Instant Capture</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => onNavigateTab('journal')}
+            className="flex items-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:opacity-95 text-white font-bold rounded-2xl shadow-lg shadow-cyan-950/20 text-xs transition-all cursor-pointer"
+          >
+            <Mic className="h-4.5 w-4.5" />
+            <span>Record Voice Journal</span>
+          </button>
+        </div>
       </div>
+
+      {/* DAILY LIFE RITUALS (FEATURE TWO) */}
+      <DailyRitualsCard 
+        userId={session.user?.uid || 'local_user'} 
+        localEntries={localEntries}
+        onComplete={() => onNavigateTab('journal')}
+      />
 
       {/* 2. MAIN BENTO GRID */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Card 1: Reflection Habit Streak */}
+        {/* Card 1: Gentle Continuity & Micro-Recognition */}
         <div className="p-5 rounded-3xl bg-amber-500/5 border border-amber-500/10 flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest font-bold">Habit Tracker</span>
-            <Flame className="h-5 w-5 text-amber-400 fill-amber-400/20" />
+            <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest font-bold">Gentle Continuity</span>
+            <Sparkles className="h-5 w-5 text-amber-400" />
           </div>
           <div>
-            <div className="text-3xl font-black text-amber-400">{streak} Day Streak</div>
+            <div className="text-xl font-bold text-amber-300">
+              {localEntries.length > 0 ? "You're making space" : "Begin when ready"}
+            </div>
             <p className="text-xs text-gray-300 mt-1.5 leading-relaxed">
-              {streak > 0 
-                ? "Excellent consistency! You're building a healthy daily self-reflection habit." 
-                : "Speak your mind today to kickstart your daily reflection streak."}
+              {localEntries.length > 0 
+                ? "You returned to something that matters to you. Consistency in LogEasy is about returning with kindness, never about rigid unbroken chains." 
+                : "No pressure or artificial urgency. Capture a vocal thought whenever you feel called."}
             </p>
           </div>
-          <div className="flex gap-1.5 pt-2">
-            {[1, 2, 3, 4, 5, 6, 7].map((day) => {
-              const isFilled = day <= streak;
-              return (
-                <div 
-                  key={day} 
-                  className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                    isFilled 
-                      ? 'bg-amber-400 text-slate-900 shadow-sm shadow-amber-400/20' 
-                      : 'bg-gray-800 text-gray-500 border border-gray-700'
-                  }`}
-                >
-                  {day === 7 ? 'S' : day === 6 ? 'S' : day === 5 ? 'F' : day === 4 ? 'T' : day === 3 ? 'W' : day === 2 ? 'T' : 'M'}
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-2 pt-2 text-[11px] text-amber-300/80 font-mono">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span>Zero shame • Returning is the victory</span>
           </div>
         </div>
 
@@ -276,7 +280,54 @@ export default function HomeDashboard({
 
       </div>
 
-      {/* 4. WEEK SUMMARY REPORT SECTION */}
+      {/* 4. PERSONAL LIFE MODEL INTELLIGENCE DISCOVERY ROW */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button
+          onClick={() => onNavigateTab('connections')}
+          className="p-4 rounded-2xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/15 hover:border-cyan-500/30 text-left transition-all cursor-pointer space-y-2 group"
+        >
+          <Network className="h-5 w-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+          <div>
+            <h4 className="text-xs font-bold text-gray-200">Connections</h4>
+            <p className="text-[11px] text-gray-400">Discover longitudinal links</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigateTab('patterns')}
+          className="p-4 rounded-2xl bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/15 hover:border-purple-500/30 text-left transition-all cursor-pointer space-y-2 group"
+        >
+          <Activity className="h-5 w-5 text-purple-400 group-hover:scale-110 transition-transform" />
+          <div>
+            <h4 className="text-xs font-bold text-gray-200">Life Patterns</h4>
+            <p className="text-[11px] text-gray-400">Recurring rhythms & rest</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigateTab('habits')}
+          className="p-4 rounded-2xl bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/15 hover:border-emerald-500/30 text-left transition-all cursor-pointer space-y-2 group"
+        >
+          <Heart className="h-5 w-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+          <div>
+            <h4 className="text-xs font-bold text-gray-200">Soft Consistency</h4>
+            <p className="text-[11px] text-gray-400">Zero-shame daily rhythms</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigateTab('archive')}
+          className="p-4 rounded-2xl bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/15 hover:border-amber-500/30 text-left transition-all cursor-pointer space-y-2 group"
+        >
+          <Archive className="h-5 w-5 text-amber-400 group-hover:scale-110 transition-transform" />
+          <div>
+            <h4 className="text-xs font-bold text-gray-200">Life Archive</h4>
+            <p className="text-[11px] text-gray-400">Export &amp; sovereignty</p>
+          </div>
+        </button>
+      </div>
+
+      {/* 5. WEEK SUMMARY REPORT SECTION */}
       <div className="p-6 rounded-3xl bg-cyan-500/5 border border-cyan-500/10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">
           <h3 className="text-sm font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">

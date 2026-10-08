@@ -74,9 +74,9 @@ export class ContextRetrievalEngine {
 
     // LEVEL 4: Verified Knowledge (from Knowledge Vault)
     const level4VerifiedKnowledge: string[] = vaultItems
-      .filter(item => item.status === 'verified')
+      .filter(item => item.memoryState === 'verified_knowledge' || item.type === 'lesson')
       .slice(0, 2)
-      .map(item => `Core Lesson: ${item.principle}`);
+      .map(item => `Core Lesson: ${item.title} - ${item.content}`);
 
     // LEVEL 5: Deep Historical Context (Current Life Chapter)
     const activeChapter = chapters.find(c => !c.endYear);

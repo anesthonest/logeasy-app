@@ -11,6 +11,7 @@ import { localDB, LocalJournalEntry } from '../../core/database/local_db';
 import { Goal, Habit } from '../../core/ai/coach_types';
 import { AIMemory, AIEntity, AIInsight } from '../../core/ai/ai_types';
 import { logger } from '../../core/analytics/logger';
+import { notificationManager } from '../../core/notifications/notification_manager';
 import PersonalIntelligenceEngine from './PersonalIntelligenceEngine';
 import SimpleInsightsDashboard from './SimpleInsightsDashboard';
 import PersonalLifeIntelligenceHub from '../hios/PersonalLifeIntelligenceHub';
@@ -378,14 +379,22 @@ Return a JSON block containing a compiled review. Return ONLY valid JSON, do not
   // Pin code save
   const handleSavePin = () => {
     if (newPinInput.length !== 4) {
-      alert("PIN must be exactly 4 digits.");
+      notificationManager.addNotification({
+        title: 'Invalid PIN',
+        body: 'PIN must be exactly 4 digits.',
+        type: 'conflict',
+      });
       return;
     }
     setIsLockerActive(true);
     setPinCode(newPinInput);
     localStorage.setItem('logeasy_lock_enabled', 'true');
     localStorage.setItem('logeasy_lock_pin', newPinInput);
-    alert(`Secure Locker enabled! PIN is ${newPinInput}. Do not forget it.`);
+    notificationManager.addNotification({
+      title: 'Secure Locker Enabled',
+      body: `PIN is configured. Keep it safe to access your locked memories.`,
+      type: 'achievement',
+    });
     setNewPinInput('');
   };
 
@@ -394,7 +403,11 @@ Return a JSON block containing a compiled review. Return ONLY valid JSON, do not
     setPinCode('');
     localStorage.setItem('logeasy_lock_enabled', 'false');
     localStorage.removeItem('logeasy_lock_pin');
-    alert("Secure Locker disabled.");
+    notificationManager.addNotification({
+      title: 'Secure Locker Disabled',
+      body: 'Locker protection turned off.',
+      type: 'reminder',
+    });
   };
 
   // Pricing plans array
@@ -410,7 +423,11 @@ Return a JSON block containing a compiled review. Return ONLY valid JSON, do not
     if (plan.name === 'Free') {
       setUserSubscriptionTier('Free');
       localStorage.setItem('logeasy_tier', 'Free');
-      alert("Switched back to Free plan.");
+      notificationManager.addNotification({
+        title: 'Plan Updated',
+        body: 'Switched back to Free plan.',
+        type: 'reminder',
+      });
       return;
     }
     setCheckoutPlan(plan);
@@ -419,7 +436,11 @@ Return a JSON block containing a compiled review. Return ONLY valid JSON, do not
   const handleProcessCheckout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!ccNumber || !ccExpiry || !ccCvv) {
-      alert("Please fill in mock checkout card credentials.");
+      notificationManager.addNotification({
+        title: 'Checkout Incomplete',
+        body: 'Please fill in mock checkout card credentials.',
+        type: 'conflict',
+      });
       return;
     }
     setProcessingPayment(true);
@@ -428,7 +449,11 @@ Return a JSON block containing a compiled review. Return ONLY valid JSON, do not
       setProcessingPayment(false);
       setUserSubscriptionTier(checkoutPlan.name);
       localStorage.setItem('logeasy_tier', checkoutPlan.name);
-      alert(`Success! Simulated payment completed. Welcome to LogEasy ${checkoutPlan.name}!`);
+      notificationManager.addNotification({
+        title: 'Subscription Active',
+        body: `Welcome to LogEasy ${checkoutPlan.name}!`,
+        type: 'achievement',
+      });
       setCheckoutPlan(null);
       setCcNumber('');
       setCcExpiry('');

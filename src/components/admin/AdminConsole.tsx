@@ -64,6 +64,7 @@ import { apiIntegrationService, IntegrationConfig, IntegrationMetric, WebhookCon
 import { pluginManager, PluginInstance } from '../../core/plugins/plugin_manager';
 import { complianceService } from '../../core/security/compliance_service';
 import { launchReadinessService, TestSuiteResult, LocalizationPack, PipelineStep } from '../../core/admin/launch_readiness_service';
+import { notificationManager } from '../../core/notifications/notification_manager';
 
 export interface AdminConsoleProps {
   userId: string;
@@ -175,7 +176,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
     e.preventDefault();
     if (!mfaCode || mfaCode.length < 6) {
       logger.error('AdminConsole', 'Authentication failed: Invalid Multi-Factor Token');
-      alert('Authentication error: Multi-Factor Authentication token must be exactly 6 digits.');
+      notificationManager.addNotification({
+        title: 'Authentication Error',
+        body: 'Multi-Factor Authentication token must be exactly 6 digits.',
+        type: 'conflict'
+      });
       return;
     }
 
@@ -202,7 +207,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
   // Administrative Actions
   const handleToggleUserSuspension = (targetUserId: string) => {
     if (!hasPerm('manage_users')) {
-      alert('Security Exception: Your admin role does not possess the manage_users permission.');
+      notificationManager.addNotification({
+        title: 'Security Exception',
+        body: 'Your admin role does not possess the manage_users permission.',
+        type: 'conflict'
+      });
       return;
     }
     const isNowSuspended = adminService.toggleUserSuspension(targetUserId);
@@ -210,25 +219,41 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
     if (selectedUser && selectedUser.userId === targetUserId) {
       setSelectedUser({ ...selectedUser, isSuspended: isNowSuspended });
     }
-    alert(`Account ${targetUserId} status updated: ${isNowSuspended ? 'SUSPENDED' : 'RESTORED'}`);
+    notificationManager.addNotification({
+      title: 'User Status Updated',
+      body: `Account ${targetUserId} status updated: ${isNowSuspended ? 'SUSPENDED' : 'RESTORED'}`,
+      type: 'system'
+    });
   };
 
   const handleDeleteUserSecurely = (targetUserId: string) => {
     if (!hasPerm('delete_users')) {
-      alert('Security Exception: Critical user data deletion requires Super Administrator status.');
+      notificationManager.addNotification({
+        title: 'Security Exception',
+        body: 'Critical user data deletion requires Super Administrator status.',
+        type: 'conflict'
+      });
       return;
     }
     if (confirm(`CRITICAL: Are you absolutely sure you want to permanently erase user ${targetUserId}? This clears all device credentials and local state partitions.`)) {
       adminService.deleteUserAccountSecurely(targetUserId);
       setSelectedUser(null);
       refreshData();
-      alert('User database registry cleared successfully.');
+      notificationManager.addNotification({
+        title: 'User Erased',
+        body: 'User database registry cleared successfully.',
+        type: 'system'
+      });
     }
   };
 
   const handleTicketAssign = (ticketId: string) => {
     if (!hasPerm('resolve_support_tickets')) {
-      alert('Unauthorized action.');
+      notificationManager.addNotification({
+        title: 'Unauthorized Action',
+        body: 'Missing resolve_support_tickets permission.',
+        type: 'conflict'
+      });
       return;
     }
     adminService.assignTicket(ticketId, 'agent_alex', session?.adminUser.username || 'Alex Admin');
@@ -237,7 +262,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
 
   const handleTicketReply = (ticketId: string, isInternal: boolean) => {
     if (!hasPerm('resolve_support_tickets')) {
-      alert('Unauthorized action.');
+      notificationManager.addNotification({
+        title: 'Unauthorized Action',
+        body: 'Missing resolve_support_tickets permission.',
+        type: 'conflict'
+      });
       return;
     }
     const text = isInternal ? ticketInternalNotes : ticketReplyText;
@@ -254,7 +283,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
 
   const handleTicketResolve = (ticketId: string) => {
     if (!hasPerm('resolve_support_tickets')) {
-      alert('Unauthorized action.');
+      notificationManager.addNotification({
+        title: 'Unauthorized Action',
+        body: 'Missing resolve_support_tickets permission.',
+        type: 'conflict'
+      });
       return;
     }
     adminService.resolveTicket(ticketId);
@@ -263,7 +296,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
 
   const handleUpdateFeatureFlag = (flagKey: string, value: boolean) => {
     if (!hasPerm('modify_remote_config')) {
-      alert('Unauthorized action.');
+      notificationManager.addNotification({
+        title: 'Unauthorized Action',
+        body: 'Missing modify_remote_config permission.',
+        type: 'conflict'
+      });
       return;
     }
     if (!remoteConfig) return;
@@ -274,7 +311,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
 
   const handleUpdatePrice = (priceKey: string, value: number) => {
     if (!hasPerm('modify_remote_config')) {
-      alert('Unauthorized action.');
+      notificationManager.addNotification({
+        title: 'Unauthorized Action',
+        body: 'Missing modify_remote_config permission.',
+        type: 'conflict'
+      });
       return;
     }
     if (!remoteConfig) return;
@@ -286,7 +327,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
   const handleCreateCampaign = (e: React.FormEvent) => {
     e.preventDefault();
     if (!hasPerm('manage_marketing')) {
-      alert('Security Exception: Marketing campaign management requires Administrative clearance.');
+      notificationManager.addNotification({
+        title: 'Security Exception',
+        body: 'Marketing campaign management requires Administrative clearance.',
+        type: 'conflict'
+      });
       return;
     }
     if (!newCampaignTitle.trim()) return;
@@ -299,7 +344,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
     );
     setNewCampaignTitle('');
     refreshData();
-    alert(`Campaign "${newCampaignTitle}" added to pending scheduling logs.`);
+    notificationManager.addNotification({
+      title: 'Campaign Scheduled',
+      body: `Campaign "${newCampaignTitle}" added to pending scheduling logs.`,
+      type: 'achievement'
+    });
   };
 
   const handleResolveAlert = (alertId: string) => {
@@ -1119,7 +1168,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                           onClick={() => {
                             if (confirm('Verify refund of transaction tx_94821 ($79.99)?')) {
                               logger.warn('AdminConsole', 'Refunded Transaction tx_94821 ($79.99)');
-                              alert('Refund processed back to customer bank account.');
+                              notificationManager.addNotification({
+                                title: 'Refund Processed',
+                                body: 'Refund processed back to customer bank account.',
+                                type: 'system'
+                              });
                             }
                           }}
                           className="px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded cursor-pointer"
@@ -1136,7 +1189,13 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                       <td>2026-06-28</td>
                       <td className="text-right">
                         <button 
-                          onClick={() => alert('Verify refund processed.')}
+                          onClick={() => {
+                            notificationManager.addNotification({
+                              title: 'Refund Status',
+                              body: 'Refund verified and processed for tx_94819.',
+                              type: 'system'
+                            });
+                          }}
                           className="px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded cursor-pointer"
                         >
                           Revoke & Refund
@@ -1666,7 +1725,13 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                       <div className="flex items-center justify-between text-[11px] text-gray-400">
                         <span>Timestamp: {new Date(report.timestamp).toLocaleTimeString()}</span>
                         <button 
-                          onClick={() => alert('Simulated fix deployment active. This crash profile resolved.')}
+                          onClick={() => {
+                            notificationManager.addNotification({
+                              title: 'Fix Deployed',
+                              body: 'Simulated fix deployment active. This crash profile resolved.',
+                              type: 'achievement'
+                            });
+                          }}
                           className="text-cyan-400 hover:underline"
                         >
                           Resolve & close ticket
@@ -1740,7 +1805,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                         setIsPipelineRunningState(false);
                         setPipelineStepIndex(-1);
                         refreshData();
-                        alert('Continuous Integration Deployment Gating checks completed with status: SUCCESS (A+).');
+                        notificationManager.addNotification({
+                          title: 'CI/CD Completed',
+                          body: 'Continuous Integration Deployment Gating checks completed with status: SUCCESS (A+).',
+                          type: 'achievement'
+                        });
                       }
                     }}
                     disabled={isPipelineRunningState}
@@ -1968,7 +2037,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                     apiIntegrationService.registerWebhook(newWebhookEvent, newWebhookUrl, newWebhookSecret);
                     setNewWebhookUrl('');
                     refreshData();
-                    alert('Custom outgoing webhook target url successfully registered.');
+                    notificationManager.addNotification({
+                      title: 'Webhook Registered',
+                      body: 'Custom outgoing webhook target url successfully registered.',
+                      type: 'system'
+                    });
                   }}
                   className="space-y-3.5 text-xs text-gray-300"
                 >
@@ -2021,7 +2094,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                       type="button"
                       onClick={() => {
                         apiIntegrationService.triggerWebhookSimulated('journal.created', { id: 'journal_102', transcript: 'Simulated journal entry hook' });
-                        alert('Hook notification simulation fired. Check system console and metrics.');
+                        notificationManager.addNotification({
+                          title: 'Hook Simulation',
+                          body: 'Hook notification simulation fired. Check system console and metrics.',
+                          type: 'system'
+                        });
                         refreshData();
                       }}
                       className="px-3.5 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/25 rounded-lg font-bold text-xs cursor-pointer whitespace-nowrap"
@@ -2155,9 +2232,17 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                         const parsed = JSON.parse(pluginConfigValue);
                         pluginManager.updatePluginConfig(selectedPlugin.meta.id, parsed);
                         refreshData();
-                        alert(`Configuration options compiled successfully for: ${selectedPlugin.meta.name}`);
+                        notificationManager.addNotification({
+                          title: 'Plugin Config Saved',
+                          body: `Configuration options compiled successfully for: ${selectedPlugin.meta.name}`,
+                          type: 'achievement'
+                        });
                       } catch (err) {
-                        alert('Invalid JSON formatting: Please make sure your schema is fully valid before saving.');
+                        notificationManager.addNotification({
+                          title: 'Invalid JSON',
+                          body: 'Please make sure your schema is fully valid before saving.',
+                          type: 'conflict'
+                        });
                       }
                     }}
                     className="space-y-4 text-xs text-gray-300"
@@ -2239,7 +2324,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                           downloadAnchor.remove();
 
                           logger.info('AdminConsole', `Executed GDPR Article 20 Export for ${session?.adminUser.id}`);
-                          alert(`GDPR compliance file '${fileName}' assembled and downloaded.`);
+                          notificationManager.addNotification({
+                            title: 'GDPR Export Ready',
+                            body: `GDPR compliance file '${fileName}' assembled and downloaded.`,
+                            type: 'achievement'
+                          });
                         }}
                         className="px-3.5 py-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/25 text-emerald-400 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer text-xs"
                       >
@@ -2304,7 +2393,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                         const emailInput = document.getElementById('purge_user_email') as HTMLInputElement;
                         const email = emailInput?.value || '';
                         if (!email.trim() || !email.includes('@')) {
-                          alert('Purge Error: Please fill in a valid registered user email.');
+                          notificationManager.addNotification({
+                            title: 'Purge Error',
+                            body: 'Please fill in a valid registered user email.',
+                            type: 'conflict'
+                          });
                           return;
                         }
 
@@ -2318,7 +2411,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                           );
                           if (success) {
                             if (emailInput) emailInput.value = '';
-                            alert(`Data scrubbed. All registers associated with ${email} have been successfully wiped from LogEasy database servers.`);
+                            notificationManager.addNotification({
+                              title: 'Data Scrubbed',
+                              body: `All registers associated with ${email} have been wiped under GDPR Article 17.`,
+                              type: 'system'
+                            });
                             refreshData();
                           }
                         }

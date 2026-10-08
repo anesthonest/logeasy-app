@@ -13,6 +13,7 @@ import { Goal, Habit, ReflectionSession } from '../../core/ai/coach_types';
 import { AIEntity, AIInsight, AIMemory } from '../../core/ai/ai_types';
 import { logger } from '../../core/analytics/logger';
 import { aiService } from '../../core/ai/ai_service';
+import { notificationManager } from '../../core/notifications/notification_manager';
 
 // Import Recharts
 import {
@@ -367,7 +368,11 @@ Please output a JSON report structure. If we are offline, use our local processo
     a.href = url;
     a.download = `LogEasy_${recapType}_Audio_Recap_${narrationVoice}.txt`;
     a.click();
-    alert('Simulated Audio Transcript downloaded successfully!');
+    notificationManager.addNotification({
+      title: 'Transcript Downloaded',
+      body: 'Audio recap transcript file downloaded successfully.',
+      type: 'achievement',
+    });
   };
 
   // ----------------------------------------------------
@@ -471,9 +476,17 @@ Please output a JSON report structure. If we are offline, use our local processo
         a.download = `LogEasy_Archive_Vault.zip`;
         a.click();
       }
-      alert(`Success: Export completed in ${format.toUpperCase()} format.`);
-    } catch (e) {
-      alert(`Failed to export: ${e}`);
+      notificationManager.addNotification({
+        title: 'Export Completed',
+        body: `Export successfully generated in ${format.toUpperCase()} format.`,
+        type: 'achievement',
+      });
+    } catch (e: any) {
+      notificationManager.addNotification({
+        title: 'Export Failed',
+        body: `Failed to export: ${e?.message || e}`,
+        type: 'conflict',
+      });
     }
   };
 

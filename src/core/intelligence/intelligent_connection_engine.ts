@@ -112,7 +112,7 @@ export class IntelligentConnectionEngine {
     for (const goal of goals) {
       const gKeywords = goal.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
       const relatedHabits = habits.filter(h => 
-        gKeywords.some(kw => h.title.toLowerCase().includes(kw))
+        gKeywords.some(kw => (h.name || '').toLowerCase().includes(kw))
       );
 
       for (const habit of relatedHabits) {
@@ -120,13 +120,13 @@ export class IntelligentConnectionEngine {
           id: `conn_goal_habit_${goal.id}_${habit.id}`,
           userId,
           domain: 'habit_goal',
-          title: `Rhythm Alignment: ${habit.title} → ${goal.title}`,
-          source: { id: habit.id, type: 'habit', label: habit.title },
+          title: `Rhythm Alignment: ${habit.name} → ${goal.title}`,
+          source: { id: habit.id, type: 'habit', label: habit.name },
           target: { id: goal.id, type: 'goal', label: goal.title },
           relationshipType: 'foundation_support',
           confidence: 0.91,
-          evidence: `The habit "${habit.title}" directly sustains progress towards your goal "${goal.title}".`,
-          explanation: `Your entries suggest consistency in "${habit.title}" provides the cognitive momentum required to achieve "${goal.title}".`,
+          evidence: `The habit "${habit.name}" directly sustains progress towards your goal "${goal.title}".`,
+          explanation: `Your entries suggest consistency in "${habit.name}" provides the cognitive momentum required to achieve "${goal.title}".`,
           supportingEntryIds: [],
           createdAt: new Date().toISOString(),
           userStatus: 'confirmed',

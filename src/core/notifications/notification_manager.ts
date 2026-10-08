@@ -11,7 +11,7 @@ export interface LocalNotification {
   body: string;
   timestamp: string;
   isRead: boolean;
-  type: 'system' | 'reminder' | 'sync' | 'security';
+  type: 'system' | 'reminder' | 'sync' | 'security' | 'conflict' | 'achievement';
 }
 
 class NotificationManager {

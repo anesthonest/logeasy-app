@@ -10,6 +10,7 @@ import { aiIntelligenceEngine } from '../../core/ai/ai_intelligence_engine';
 import { aiService } from '../../core/ai/ai_service';
 import { AIMemory, AIEntity, AIRelationship, AIInsight, AISummary } from '../../core/ai/ai_types';
 import { logger } from '../../core/analytics/logger';
+import { notificationManager } from '../../core/notifications/notification_manager';
 
 interface AIIntelligenceDashboardProps {
   userId: string;
@@ -247,7 +248,11 @@ export default function AIIntelligenceDashboard({ userId }: AIIntelligenceDashbo
     if (confirm('CRITICAL ACTION: This will completely scrub your long-term memories, knowledge graph nodes, and insights from local IndexedDB storage. Continue?')) {
       await localDB.clearAllAIData(userId);
       await reloadData();
-      alert('AI Intelligence cache reset completed successfully.');
+      notificationManager.addNotification({
+        title: 'Cache Cleared',
+        body: 'AI Intelligence cache reset completed successfully.',
+        type: 'reminder',
+      });
     }
   };
 

@@ -651,7 +651,11 @@ export default function MonetizationDashboard({ userId }: MonetizationDashboardP
                         el.value = '';
                         reloadData();
                       } catch (err: any) {
-                        alert(err.message);
+                        notificationManager.addNotification({
+                          title: 'Invite Failed',
+                          body: err?.message || 'Unable to invite member.',
+                          type: 'conflict'
+                        });
                       }
                     }
                   }}
@@ -1097,7 +1101,11 @@ export default function MonetizationDashboard({ userId }: MonetizationDashboardP
                 <button 
                   onClick={async () => {
                     const granted = await notificationManager.requestPermissions();
-                    alert(granted ? '✓ Notification permissions granted!' : '✗ Notification permissions denied by browser configurations.');
+                    notificationManager.addNotification({
+                      title: 'Browser Notifications',
+                      body: granted ? 'Notification permissions granted!' : 'Notification permissions denied by browser configuration.',
+                      type: granted ? 'system' : 'conflict'
+                    });
                   }}
                   className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 cursor-pointer"
                 >
