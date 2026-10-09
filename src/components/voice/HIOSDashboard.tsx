@@ -12,6 +12,7 @@ import { Goal, Habit } from '../../core/ai/coach_types';
 import { AIMemory, AIEntity, AIInsight } from '../../core/ai/ai_types';
 import { logger } from '../../core/analytics/logger';
 import { notificationManager } from '../../core/notifications/notification_manager';
+import { safeParseJSON } from '../../core/ai/json_helper';
 import PersonalIntelligenceEngine from './PersonalIntelligenceEngine';
 import SimpleInsightsDashboard from './SimpleInsightsDashboard';
 import PersonalLifeIntelligenceHub from '../hios/PersonalLifeIntelligenceHub';
@@ -153,13 +154,24 @@ export default function HIOSDashboard({ userId, localEntries }: HIOSDashboardPro
     setGeneratingStrategy(true);
     setStrategyResult(null);
 
+    const fallbackStrategy = {
+      strategy: "Focus on micro-habits. Your communication logs suggest high resilience when completing morning goals early.",
+      milestones: [
+        "Phase 1: 5-minute morning vocal entry before checking your phone.",
+        "Phase 2: Perform 10-minute cardiovascular focus training.",
+        "Phase 3: Update your project manager with structural dependency goals."
+      ],
+      decisions: "Decision Audit: Avoid evening working memory overload. High cortisol rates detected after midnight logs.",
+      opportunities: "Opportunities: High-impact study slots detected between 08:00 and 10:00."
+    };
+
     try {
       const response = await fetch('/api/ai/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `User is building a strategy for: "${strategyPrompt}".
-Based on this, generate a JSON response with the following keys. Return ONLY valid JSON, do not include markdown backticks or any other text around the JSON block.
+Based on this, generate a JSON response with the following keys. Return ONLY valid JSON:
 {
   "strategy": "A high-level personal strategy focusing on micro-habits and cognitive stability",
   "milestones": [
@@ -170,49 +182,32 @@ Based on this, generate a JSON response with the following keys. Return ONLY val
   "decisions": "A decision audit / stress-reduction tip",
   "opportunities": "An opportunistic suggestion for high-impact growth"
 }`,
-          systemInstruction: 'You are an advanced AI Life Strategist. You help users analyze routines, identify friction, and build action plans. Always return valid, parsable JSON with structure: { "strategy": string, "milestones": string[], "decisions": string, "opportunities": string }'
+          systemInstruction: 'You are an advanced AI Life Strategist. You help users analyze routines, identify friction, and build action plans. Always return valid, parsable JSON with structure: { "strategy": string, "milestones": string[], "decisions": string, "opportunities": string }',
+          responseMimeType: 'application/json',
+          maxOutputTokens: 2500,
         })
       });
 
       if (!response.ok) throw new Error('API failed');
       const data = await response.json();
       
-      let cleanText = data.text.trim();
-      if (cleanText.startsWith('```json')) {
-        cleanText = cleanText.substring(7);
-      }
-      if (cleanText.startsWith('```')) {
-        cleanText = cleanText.substring(3);
-      }
-      if (cleanText.endsWith('```')) {
-        cleanText = cleanText.substring(0, cleanText.length - 3);
-      }
-      cleanText = cleanText.trim();
+      const parsed = safeParseJSON(data.text, fallbackStrategy);
       
-      const parsed = JSON.parse(cleanText);
       setStrategyResult({
         goal: strategyPrompt,
-        strategy: parsed.strategy || "Focus on micro-habits. Your communication logs suggest high resilience when completing morning goals early.",
-        milestones: parsed.milestones || [
-          "Phase 1: 5-minute morning vocal entry before checking your phone.",
-          "Phase 2: Perform 10-minute cardiovascular focus training.",
-          "Phase 3: Update your project manager with structural dependency goals."
-        ],
-        decisions: parsed.decisions || "Decision Audit: Avoid evening working memory overload. High cortisol rates detected after midnight logs.",
-        opportunities: parsed.opportunities || "Opportunities: High-impact study slots detected between 08:00 and 10:00."
+        strategy: parsed.strategy || fallbackStrategy.strategy,
+        milestones: Array.isArray(parsed.milestones) && parsed.milestones.length > 0 ? parsed.milestones : fallbackStrategy.milestones,
+        decisions: parsed.decisions || fallbackStrategy.decisions,
+        opportunities: parsed.opportunities || fallbackStrategy.opportunities,
       });
     } catch (e) {
-      console.error('[HIOS] Strategy generation failed, using local fallback:', e);
+      console.warn('[HIOS] Strategy generation failed, using local fallback:', e);
       setStrategyResult({
         goal: strategyPrompt,
-        strategy: "Focus on micro-habits. Your communication logs suggest high resilience when completing morning goals early.",
-        milestones: [
-          "Phase 1: 5-minute morning vocal entry before checking your phone.",
-          "Phase 2: Perform 10-minute cardiovascular focus training.",
-          "Phase 3: Update your project manager with structural dependency goals."
-        ],
-        decisions: "Decision Audit: Avoid evening working memory overload. High cortisol rates detected after midnight logs.",
-        opportunities: "Opportunities: High-impact study slots detected between 08:00 and 10:00."
+        strategy: fallbackStrategy.strategy,
+        milestones: fallbackStrategy.milestones,
+        decisions: fallbackStrategy.decisions,
+        opportunities: fallbackStrategy.opportunities,
       });
     } finally {
       setGeneratingStrategy(false);
@@ -277,6 +272,20 @@ Based on this, generate a JSON response with the following keys. Return ONLY val
       .map(entry => `[${entry.createdAt}] ${entry.transcript}`)
       .join('\n');
 
+    const fallbackReview = {
+      summary: "Your cognitive flow has stabilized. The Memory Agent detected high positive references and study milestones.",
+      achievements: [
+        `Logged spoken thoughts locally: ${localEntries.length} entries in storage`,
+        "Successfully maintained a consistent study session of Project Alpha",
+        "Maintained emotional balance with an average score of 7.2/10"
+      ],
+      nextSteps: [
+        "Connect with positive social support loops.",
+        "Review IndexedDB sharding dependency before deploying next module version.",
+        "Decompress before sleep to lower stress levels detected in evening entries."
+      ]
+    };
+
     try {
       const response = await fetch('/api/ai/process', {
         method: 'POST',
@@ -286,7 +295,7 @@ Based on this, generate a JSON response with the following keys. Return ONLY val
 Here are the user's recent spoken thoughts/journal entries for context:
 ${recentTranscripts || "No recent entries logged yet."}
 
-Return a JSON block containing a compiled review. Return ONLY valid JSON, do not include markdown backticks or other decoration.
+Return a JSON block containing a compiled review:
 {
   "summary": "A thoughtful 1-2 sentence overview of their cognitive flow, patterns, and support network observations based on entries.",
   "achievements": [
@@ -300,57 +309,31 @@ Return a JSON block containing a compiled review. Return ONLY valid JSON, do not
     "Coping/growth suggestion 3"
   ]
 }`,
-          systemInstruction: 'You are an advanced reflective human intelligence analyst. You synthesize journal logs into high-level performance insights, emotional trends, and balanced recommendations. Always return valid parsable JSON with exactly the fields summary, achievements, nextSteps.'
+          systemInstruction: 'You are an advanced reflective human intelligence analyst. You synthesize journal logs into high-level performance insights, emotional trends, and balanced recommendations. Always return valid parsable JSON with exactly the fields summary, achievements, nextSteps.',
+          responseMimeType: 'application/json',
+          maxOutputTokens: 2500,
         })
       });
 
       if (!response.ok) throw new Error('API failed');
       const data = await response.json();
       
-      let cleanText = data.text.trim();
-      if (cleanText.startsWith('```json')) {
-        cleanText = cleanText.substring(7);
-      }
-      if (cleanText.startsWith('```')) {
-        cleanText = cleanText.substring(3);
-      }
-      if (cleanText.endsWith('```')) {
-        cleanText = cleanText.substring(0, cleanText.length - 3);
-      }
-      cleanText = cleanText.trim();
-      
-      const parsed = JSON.parse(cleanText);
+      const parsed = safeParseJSON(data.text, fallbackReview);
       setCompiledReview({
         title: `HIOS ${reviewType.toUpperCase()} REVIEW REPORT`,
         period: `${new Date(Date.now() - 7 * 86400000).toLocaleDateString()} - ${new Date().toLocaleDateString()}`,
-        summary: parsed.summary || "Your cognitive flow has stabilized. The Memory Agent detected high positive references and study milestones.",
-        achievements: parsed.achievements || [
-          `Logged spoken thoughts locally: ${localEntries.length} entries in storage`,
-          "Successfully maintained a consistent study session of Project Alpha",
-          "Maintained emotional balance with an average score of 7.2/10"
-        ],
-        nextSteps: parsed.nextSteps || [
-          "Connect with positive social support loops.",
-          "Review IndexedDB sharding dependency before deploying next module version.",
-          "Decompress before sleep to lower stress levels detected in evening entries."
-        ]
+        summary: parsed.summary || fallbackReview.summary,
+        achievements: Array.isArray(parsed.achievements) && parsed.achievements.length > 0 ? parsed.achievements : fallbackReview.achievements,
+        nextSteps: Array.isArray(parsed.nextSteps) && parsed.nextSteps.length > 0 ? parsed.nextSteps : fallbackReview.nextSteps
       });
     } catch (e) {
-      console.error('[HIOS] Review compilation failed, using local fallback:', e);
+      console.warn('[HIOS] Review compilation failed, using local fallback:', e);
       setCompiledReview({
         title: `HIOS ${reviewType.toUpperCase()} REVIEW REPORT`,
         period: `${new Date(Date.now() - 7 * 86400000).toLocaleDateString()} - ${new Date().toLocaleDateString()}`,
-        summary: "Your cognitive flow has stabilized. The Memory Agent detected high positive references with Alice and study milestones. No burnout risk warnings generated.",
-        achievements: [
-          `Logged spoken thoughts locally: ${localEntries.length} entries in storage`,
-          "Successfully maintained a 4-day consistent study session of Project Alpha",
-          "Maintained emotional balance with an average score of 7.2/10"
-        ],
-        nextSteps: [
-          "Connect with Alice to foster positive social support loops.",
-          "Review IndexedDB sharding dependency before deploying next module version.",
-          "Decompress before sleep to lower stress levels detected in evening entries."
-        ]
+        summary: fallbackReview.summary,
+        achievements: fallbackReview.achievements,
+        nextSteps: fallbackReview.nextSteps
       });
     } finally {
       setCompilingReview(false);
@@ -484,28 +467,22 @@ Return a JSON block containing the connection. Return ONLY valid JSON, do not in
   "label": "Brief 3-5 word title of the discovered connection",
   "detail": "A paragraph explaining the correlation and how it helps the user."
 }`,
-          systemInstruction: 'You are a knowledge graph builder and behavioral analyst. You discover lateral correlations between work, play, relationships, and health. Always return valid, parsable JSON with exactly the fields label and detail.'
+          systemInstruction: 'You are a knowledge graph builder and behavioral analyst. You discover lateral correlations between work, play, relationships, and health. Always return valid, parsable JSON with exactly the fields label and detail.',
+          responseMimeType: 'application/json',
+          maxOutputTokens: 1500,
         })
       });
 
       if (!response.ok) throw new Error('API failed');
       const data = await response.json();
       
-      let cleanText = data.text.trim();
-      if (cleanText.startsWith('```json')) {
-        cleanText = cleanText.substring(7);
-      }
-      if (cleanText.startsWith('```')) {
-        cleanText = cleanText.substring(3);
-      }
-      if (cleanText.endsWith('```')) {
-        cleanText = cleanText.substring(0, cleanText.length - 3);
-      }
-      cleanText = cleanText.trim();
-      
-      const parsed = JSON.parse(cleanText);
-      const label = parsed.label || 'AI Link: Work/Fitness correlation';
-      const detail = parsed.detail || 'High exercise logs match low working stress rating!';
+      const fallbackLink = {
+        label: 'AI Link: Work/Fitness correlation',
+        detail: 'High exercise logs match low working stress rating!'
+      };
+      const parsed = safeParseJSON(data.text, fallbackLink);
+      const label = parsed.label || fallbackLink.label;
+      const detail = parsed.detail || fallbackLink.detail;
 
       const updatedNodes = [...graphNodes];
       // Add a new link node
@@ -521,7 +498,7 @@ Return a JSON block containing the connection. Return ONLY valid JSON, do not in
       setGraphNodes(updatedNodes);
       setGraphStatus(`Completed. Discovered correlation link: ${detail}`);
     } catch (e) {
-      console.error('[HIOS] Link discovery failed, using local fallback:', e);
+      console.warn('[HIOS] Link discovery failed, using local fallback:', e);
       setTimeout(() => {
         const updatedNodes = [...graphNodes];
         // Add a new link node

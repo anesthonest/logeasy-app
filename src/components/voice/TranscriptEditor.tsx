@@ -212,6 +212,16 @@ export default function TranscriptEditor({ entry, onSave, onRetryTranscription }
           </div>
         </div>
 
+        {/* Provenance Badge */}
+        {entry.metadata?.provenance && (
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-500/5 border border-gray-500/10 text-[10px]">
+            <span className="text-gray-400 font-mono uppercase tracking-wider">Processing Provenance</span>
+            <span className="font-semibold px-2 py-0.5 rounded text-cyan-300 bg-cyan-500/10 border border-cyan-500/20">
+              {entry.metadata.provenance} • {entry.metadata.engineDetails || 'On-Device Engine'}
+            </span>
+          </div>
+        )}
+
         {/* Transcript Textarea Input */}
         <div className="space-y-1">
           <div className="flex justify-between items-center">

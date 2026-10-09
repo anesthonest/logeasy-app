@@ -10,6 +10,7 @@ import { syncEngine, SyncStatus } from '../../core/sync/sync_engine';
 import { aiService } from '../../core/ai/ai_service';
 import { notificationManager } from '../../core/notifications/notification_manager';
 import { logger } from '../../core/analytics/logger';
+import { unifiedTranscriptionRouter } from '../../core/audio/transcription_router';
 
 // Sub-components
 import { Folder, SearchFilter, SavedSearch, ColorTag } from './VoiceJournalTypes';
@@ -19,6 +20,7 @@ import TimelineView from './TimelineView';
 import FolderManagement from './FolderManagement';
 import SearchEngine from './SearchEngine';
 import AudioDashboard from './AudioDashboard';
+import LocalVoiceIntelligenceCard from './LocalVoiceIntelligenceCard';
 
 interface VoiceJournalDashboardProps {
   userId: string;
@@ -123,20 +125,30 @@ export default function VoiceJournalDashboard({
   ) => {
     logger.info('VoiceDashboard', `Processing voice recording: ${metadata.duration}s. Size: ${(blob.size / 1024).toFixed(1)} KB`);
 
-    // Generate simulated accent/language transcript
-    const sampleTranscripts: Record<string, string> = {
-      'en-US': `Spoken reflection on code architecture and Clean separation principles. We successfully isolated our custom voice widgets. Testing low-latency canvas sound indicators and modular state controllers. Everything compiles smoothly without leaks.`,
-      'es-ES': `Reflexión grabada sobre arquitectura de software limpia. Hemos separado exitosamente los widgets de voz modales de nuestra vista principal, manteniendo una estructura de base de datos local sólida con IndexedDB y sincronización asíncrona.`,
-      'fr-FR': `Réflexion vocale sur l'architecture logicielle propre. Nous avons isolé avec succès les composants audio de notre tableau de bord. Tout fonctionne en mode hors ligne avec IndexedDB.`,
-      'de-DE': `Sprachaufzeichnung zur sauberen Softwarearchitektur. Wir haben die Audio-Komponenten erfolgreich in eigene Module aufgeteilt. Die Synchronisierung läuft perfekt im Hintergrund.`,
-      'ja-JP': `クリーンアーキテクチャとモジュール設計に関する音声メモ。IndexedDBを使用したローカルファーストな永続化、およびバックグラウンド同期エンジンを実装しました。ビルdはすべて成功しています。`,
-      'zh-CN': `关于软件架构与模块化开发的语音随笔。我们已成功分离了录音控制台模块，并验证了本地IndexedDB与同步队列。`,
-      'pt-BR': `Reflexão por voz sobre práticas de Clean Architecture. Isolamos com sucesso nossos componentes de áudio e mantivemos consistência offline com IndexedDB.`,
-      'hi-IN': `सॉफ़्टवेयर आर्किटेक्चर और क्लीन कोडिंग सिद्धांतों पर एक वॉइस लॉग। हमने स्थानीय IndexedDB संग्रहण और समन्वयन प्रक्रिया की कार्यक्षमता को प्रमाणित किया है।`
-    };
-
     const finalLanguage = metadata.language || 'en-US';
-    const transcriptText = metadata.transcript || sampleTranscripts[finalLanguage] || sampleTranscripts['en-US'];
+    
+    // Process through Unified Transcription Router (Privacy-Preserving & Engine-Aware)
+    let transcriptText = metadata.transcript || '';
+    let provenance = 'LOCAL_BROWSER';
+    let engineDetails = 'Web Speech API';
+
+    if (!transcriptText.trim()) {
+      try {
+        const routeResult = await unifiedTranscriptionRouter.routeAndTranscribe({
+          audioBlob: blob,
+          durationSeconds: metadata.duration || 1,
+          language: finalLanguage,
+        });
+        transcriptText = routeResult.transcript;
+        provenance = routeResult.provenance;
+        engineDetails = routeResult.engineDetails;
+      } catch (e) {
+        transcriptText = 'Audio recorded. Queued for background offline processing.';
+        provenance = 'DEFERRED';
+        engineDetails = 'Deferred Local Queue';
+      }
+    }
+
     const titleText = `Vocal Log • ${new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
 
     const newEntry: LocalJournalEntry = {
@@ -198,26 +210,45 @@ export default function VoiceJournalDashboard({
     }
   };
 
-  // --- RETRY SPEECH TO TEXT SIMULATION ---
+  // --- RETRY SPEECH TO TEXT WITH ROUTER ---
   const handleRetryTranscription = async (id: string, lang: string): Promise<string> => {
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Latency
-
-    const templates: Record<string, string> = {
-      'en-US': `[Re-transcribed in English (US)] Spoken reflection on code architecture. We successfully isolated our custom voice widgets. Testing low-latency canvas sound indicators and modular state controllers. Everything compiles smoothly without leaks.`,
-      'es-ES': `[Re-transcribed in Spanish (ES)] Reflexión grabada sobre arquitectura de software limpia. Hemos separado exitosamente los widgets de voz modales de nuestra vista principal, manteniendo una estructura de base de datos local sólida con IndexedDB y sincronización asíncrona.`,
-      'fr-FR': `[Re-transcribed in French (FR)] Réflexion vocale sur l'architecture logicielle propre. Nous avons isolé avec succès les composants audio de notre tableau de bord. Tout fonctionne en mode hors ligne avec IndexedDB.`,
-      'de-DE': `[Re-transcribed in German (DE)] Sprachaufzeichnung zur sauberen Softwarearchitektur. Wir haben die Audio-Komponenten erfolgreich in eigene Module aufgeteilt. Die Synchronisierung läuft perfekt im Hintergrund.`,
-      'ja-JP': `[Re-transcribed in Japanese (JP)] クリーンアーキテクチャとモジュール設計に関する音声メモ。IndexedDBを使用したローカルファーストな永続化、およびバックグラウンド同期エンジンを実装しました。ビルdはすべて成功しています。`,
-      'zh-CN': `[Re-transcribed in Chinese (ZH)] 关于清晰代码架构和模块化设计的语音记录。成功将语音模块与主视图分离。实现了支持离线缓存的IndexedDB，以及云端后台同步策略。`,
-      'pt-BR': `[Re-transcribed in Portuguese (PT)] Reflexão de voz sobre arquitetura de sistemas. Separamos com sucesso os widgets de gravação do formulário principal, mantendo integridade local offline.`,
-      'hi-IN': `[Re-transcribed in Hindi (HI)] सॉफ़्टवेयर आर्किटेक्चर पर वॉइस नोट। हमने सफलतापूर्वक स्थानीय डेटाबेस IndexedDB के साथ सिंक्रनाइज़ेशन इंजन को जोड़ लिया है।`
-    };
-
-    const text = templates[lang] || templates['en-US'];
+    const entry = await localDB.getJournalEntry(id);
+    let blob: Blob = new Blob([], { type: 'audio/webm' });
     
-    // Update local entries list
-    setEntries(prev => prev.map(entry => entry.id === id ? { ...entry, transcript: text, language: lang } : entry));
+    if (entry?.audioUrl) {
+      try {
+        const resp = await fetch(entry.audioUrl);
+        blob = await resp.blob();
+      } catch (err) {
+        logger.warn('VoiceDashboard', 'Could not fetch original audio blob for re-transcription', err);
+      }
+    }
+
+    const routeResult = await unifiedTranscriptionRouter.routeAndTranscribe({
+      audioBlob: blob,
+      durationSeconds: entry?.audioDuration || 1,
+      language: lang,
+    });
+
+    const text = routeResult.transcript;
     
+    // Update local entries list and database
+    if (entry) {
+      const updated = {
+        ...entry,
+        transcript: text,
+        language: lang,
+        metadata: {
+          ...entry.metadata,
+          provenance: routeResult.provenance,
+          engineDetails: routeResult.engineDetails,
+          isOfflineProcessed: routeResult.isOfflineProcessed
+        }
+      };
+      await localDB.saveJournalEntry(updated);
+    }
+
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, transcript: text, language: lang } : e));
     return text;
   };
 
@@ -716,6 +747,9 @@ Exported secure-vault file compiled from LogEasy.`;
           onSelectFolder={setSelectedFolderId}
           entryCounts={getFolderCounts()}
         />
+
+        {/* Local Offline Voice AI & Whisper Engine Manager */}
+        <LocalVoiceIntelligenceCard />
 
         {/* Audio space tracking */}
         <AudioDashboard

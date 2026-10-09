@@ -52,7 +52,7 @@ async function startServer() {
 
   // Secure Gemini API Proxy Route
   app.post('/api/ai/process', async (req, res) => {
-    const { prompt, systemInstruction } = req.body;
+    const { prompt, systemInstruction, maxOutputTokens, responseMimeType, temperature } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required.' });
@@ -75,14 +75,20 @@ async function startServer() {
       
       console.log('[Server] Dispatching requests to Gemini API...');
       
+      const config: any = {
+        systemInstruction: systemInstruction || 'You are an empathetic, clinical journaling assistant.',
+        maxOutputTokens: typeof maxOutputTokens === 'number' ? maxOutputTokens : 2500,
+        temperature: typeof temperature === 'number' ? temperature : 0.7,
+      };
+
+      if (responseMimeType) {
+        config.responseMimeType = responseMimeType;
+      }
+
       const response = await ai.models.generateContent({
         model: 'gemini-3.8-flash',
         contents: prompt,
-        config: {
-          systemInstruction: systemInstruction || 'You are an empathetic, clinical journaling assistant.',
-          maxOutputTokens: 800,
-          temperature: 0.7,
-        },
+        config,
       });
 
       const responseText = response.text || 'No thoughts generated.';
@@ -103,7 +109,7 @@ async function startServer() {
 
   // Streaming Gemini API Proxy Route (SSE - Server-Sent Events)
   app.post('/api/ai/stream', async (req, res) => {
-    const { prompt, systemInstruction } = req.body;
+    const { prompt, systemInstruction, maxOutputTokens, temperature } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required.' });
@@ -135,8 +141,8 @@ async function startServer() {
         contents: prompt,
         config: {
           systemInstruction: systemInstruction || 'You are an empathetic, deep-listening journaling companion.',
-          maxOutputTokens: 1000,
-          temperature: 0.7,
+          maxOutputTokens: typeof maxOutputTokens === 'number' ? maxOutputTokens : 2500,
+          temperature: typeof temperature === 'number' ? temperature : 0.7,
         }
       });
 

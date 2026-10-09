@@ -245,21 +245,21 @@ export default function SecurityPrivacyDashboard({ userId }: SecurityPrivacyDash
     setIsDeletingAll(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
     try {
-      // Clean indexDB entries
-      const entries = await localDB.getJournalEntries(userId);
-      for (const entry of entries) {
-        await localDB.deleteJournalEntry(entry.id);
-      }
+      // 1. Forensic wipe of ALL IndexedDB stores for this user (Journals, Sync, AI memories, HIOS, Vault)
+      await localDB.wipeAllUserData(userId);
       
-      // Clear security configurations
+      // 2. Clear security configurations & tokens
       localStorage.removeItem(`backups_metadata_${userId}`);
       localStorage.removeItem(`connected_devices_${userId}`);
       localStorage.removeItem(`privacy_consent_${userId}`);
       localStorage.removeItem('security_pin_code');
+      localStorage.removeItem('security_pin_salt');
+      localStorage.removeItem('security_pin_verifier');
+      localStorage.removeItem(`audit_logs_${userId}`);
       
       await securityService.logOperation(userId, 'account_deletion', 'Purged all local databases, sync indexes, and backups safely');
       setIsDeletingAll(false);
-      triggerToast('All personal journal data, transcripts, and metadata are permanently wiped.', 'success');
+      triggerToast('All personal journal data, transcripts, knowledge graphs, and AI models are permanently wiped.', 'success');
       
       // Reload states
       setIsPinActive(false);

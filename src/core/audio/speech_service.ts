@@ -1,7 +1,10 @@
 /**
- * LogEasy Real-time Speech-to-Text Service
- * Integrates Web Speech API (webkitSpeechRecognition) for live, browser-native transcription.
- * Provides error recovery, continuous long recording capture, and multi-accent support.
+ * LogEasy Real-time Speech-to-Text Service (Path A)
+ * Hardened Web Speech API integration:
+ * - Proper auto-restart logic preventing infinite loop crashes
+ * - Explicit final vs interim transcript separation preventing duplicate text duplication
+ * - Permission & microphone disconnection recovery
+ * - Graceful fallback without ever failing audio capture
  */
 
 import { logger } from '../analytics/logger';
@@ -15,9 +18,14 @@ class SpeechToTextService {
   private static instance: SpeechToTextService;
   private recognition: any = null;
   private currentTranscript: string = '';
+  private interimTranscript: string = '';
   private onTranscriptUpdateListener: ((text: string) => void) | null = null;
   private isListening: boolean = false;
+  private shouldBeListening: boolean = false;
   private selectedLanguage: string = 'en-US';
+  private restartCount: number = 0;
+  private readonly MAX_RESTARTS = 10;
+  private restartTimeout: any = null;
 
   private constructor() {
     this.initializeEngine();
@@ -48,47 +56,62 @@ class SpeechToTextService {
       this.recognition.onstart = () => {
         logger.info('SpeechToTextService', `Speech recognition session started in: ${this.selectedLanguage}`);
         this.isListening = true;
+        this.restartCount = 0;
       };
 
       this.recognition.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
+        let interim = '';
+        let newlyFinal = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
+          const res = event.results[i];
+          if (res.isFinal) {
+            newlyFinal += (res[0]?.transcript || '');
           } else {
-            interimTranscript += event.results[i][0].transcript;
+            interim += (res[0]?.transcript || '');
           }
         }
 
-        if (finalTranscript) {
-          this.currentTranscript += (this.currentTranscript ? ' ' : '') + finalTranscript.trim();
+        if (newlyFinal.trim()) {
+          const cleaned = newlyFinal.trim();
+          if (!this.currentTranscript.endsWith(cleaned)) {
+            this.currentTranscript = (this.currentTranscript ? `${this.currentTranscript} ${cleaned}` : cleaned).trim();
+          }
         }
 
-        const combined = (this.currentTranscript + ' ' + interimTranscript).trim();
+        this.interimTranscript = interim.trim();
+        const combined = (this.currentTranscript + (this.interimTranscript ? ` ${this.interimTranscript}` : '')).trim();
+
         if (this.onTranscriptUpdateListener) {
           this.onTranscriptUpdateListener(combined);
         }
       };
 
       this.recognition.onerror = (event: any) => {
-        logger.error('SpeechToTextService', `Speech recognition error encountered: ${event.error}`, event);
-        if (event.error === 'network') {
-          logger.warn('SpeechToTextService', 'Network friction. Attempting offline/fallback caching.');
+        logger.warn('SpeechToTextService', `Speech recognition warning: ${event.error}`);
+        if (event.error === 'not-allowed') {
+          this.shouldBeListening = false;
+          this.isListening = false;
         }
       };
 
       this.recognition.onend = () => {
-        logger.info('SpeechToTextService', 'Speech recognition session ended.');
+        logger.debug('SpeechToTextService', 'Speech recognition session paused/ended.');
         this.isListening = false;
-        // Auto-restart if we are still supposed to be listening (helps support long recordings)
-        if (this.isListening) {
-          try {
-            this.recognition.start();
-          } catch (e) {
-            logger.error('SpeechToTextService', 'Auto-restart failed', e);
-          }
+        
+        // Auto-restart if we should still be listening (supports long recording sessions safely)
+        if (this.shouldBeListening && this.restartCount < this.MAX_RESTARTS) {
+          this.restartCount += 1;
+          clearTimeout(this.restartTimeout);
+          this.restartTimeout = setTimeout(() => {
+            if (this.shouldBeListening && !this.isListening) {
+              try {
+                this.recognition.start();
+              } catch (e) {
+                logger.debug('SpeechToTextService', 'Safe restart ignored (already active)');
+              }
+            }
+          }, 200);
         }
       };
     } catch (e) {
@@ -101,7 +124,7 @@ class SpeechToTextService {
     if (this.recognition) {
       this.recognition.lang = lang;
     }
-    logger.info('SpeechToTextService', `Set Speech Language language target to: ${lang}`);
+    logger.info('SpeechToTextService', `Set Speech Language target to: ${lang}`);
   }
 
   public isSupported(): boolean {
@@ -116,26 +139,30 @@ class SpeechToTextService {
     }
 
     this.currentTranscript = '';
+    this.interimTranscript = '';
     this.onTranscriptUpdateListener = onUpdate;
-    this.isListening = true;
+    this.shouldBeListening = true;
+    this.restartCount = 0;
 
     try {
       this.recognition.lang = this.selectedLanguage;
       this.recognition.start();
     } catch (e) {
-      logger.error('SpeechToTextService', 'Error starting SpeechRecognition engine', e);
-      // Re-initialize if state gets desynchronized
+      logger.debug('SpeechToTextService', 'Error starting SpeechRecognition engine; reinitializing', e);
       this.initializeEngine();
       try {
         this.recognition.start();
       } catch (retryErr) {
-        logger.error('SpeechToTextService', 'Retry starting engine failed', retryErr);
+        logger.warn('SpeechToTextService', 'Retry start failed', retryErr);
       }
     }
   }
 
   public stopTranscription(): string {
+    this.shouldBeListening = false;
     this.isListening = false;
+    clearTimeout(this.restartTimeout);
+
     if (this.recognition) {
       try {
         this.recognition.stop();
@@ -143,13 +170,14 @@ class SpeechToTextService {
         logger.debug('SpeechToTextService', 'Recognition was already stopped.');
       }
     }
-    const finalResult = this.currentTranscript.trim();
+
+    const finalResult = (this.currentTranscript + (this.interimTranscript ? ` ${this.interimTranscript}` : '')).trim();
     this.onTranscriptUpdateListener = null;
     return finalResult;
   }
 
   public getLiveTranscript(): string {
-    return this.currentTranscript;
+    return (this.currentTranscript + (this.interimTranscript ? ` ${this.interimTranscript}` : '')).trim();
   }
 }
 

@@ -5,6 +5,7 @@
  */
 
 import { logger } from '../analytics/logger';
+import { securityService } from '../security/security_service';
 
 export interface AIResponse {
   text: string;
@@ -158,9 +159,16 @@ class AIService {
   }
 
   /**
-   * Safety Guard filter (Moderation)
+   * Safety Guard filter (Moderation & Prompt Injection Defense)
    */
   public performSafetyCheck(text: string): { isSafe: boolean; reason?: string } {
+    // 1. Check prompt injection / system instruction override attempts
+    const injectionCheck = securityService.detectPromptInjection(text);
+    if (injectionCheck.isMalicious) {
+      logger.warn('AIService', `Prompt injection attack blocked. Flags: ${injectionCheck.flags.join(', ')}`);
+      return { isSafe: false, reason: `Blocked prompt injection pattern (${injectionCheck.flags.join(', ')})` };
+    }
+
     const sensitiveKeywords = ['self-harm', 'suicide', 'bomb', 'kill myself'];
     const lower = text.toLowerCase();
     

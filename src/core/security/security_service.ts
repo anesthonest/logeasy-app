@@ -139,6 +139,46 @@ class SecurityService {
       .join('');
   }
 
+  /**
+   * Sanitizes user input against XSS, HTML injection, and control characters
+   */
+  public sanitizeInput(rawText: string): string {
+    if (!rawText) return '';
+    return rawText
+      .replace(/[<>]/g, '') // Strip HTML tags
+      .replace(/javascript:/gi, '')
+      .replace(/data:/gi, '')
+      .trim();
+  }
+
+  /**
+   * Evaluates text for prompt injection, jailbreaking, and memory poisoning attacks
+   */
+  public detectPromptInjection(text: string): { isMalicious: boolean; flags: string[] } {
+    if (!text) return { isMalicious: false, flags: [] };
+    const lower = text.toLowerCase();
+    const flags: string[] = [];
+
+    const suspiciousPatterns = [
+      { pattern: /ignore\s+(all\s+)?(previous|prior|system)\s+instructions/i, name: 'instruction_override' },
+      { pattern: /you\s+are\s+now\s+(in\s+dan\s+mode|unrestricted|a\s+different\s+ai)/i, name: 'persona_hijack' },
+      { pattern: /system\s*:\s*/i, name: 'system_tag_injection' },
+      { pattern: /disregard\s+(your\s+)?rules/i, name: 'rule_bypass' },
+      { pattern: /reveal\s+(your\s+)?(developer\s+mode|system\s+prompt|secret\s+key)/i, name: 'secret_leak_attempt' }
+    ];
+
+    for (const p of suspiciousPatterns) {
+      if (p.pattern.test(lower)) {
+        flags.push(p.name);
+      }
+    }
+
+    return {
+      isMalicious: flags.length > 0,
+      flags
+    };
+  }
+
   private hexToBuf(hex: string): Uint8Array {
     const view = new Uint8Array(hex.length / 2);
     for (let i = 0; i < view.length; i++) {

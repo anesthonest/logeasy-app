@@ -16,6 +16,7 @@ import {
   AISemanticQueryResult
 } from './ai_types';
 import { aiService } from './ai_service';
+import { safeParseJSON } from './json_helper';
 
 class AIIntelligenceEngine {
   private static instance: AIIntelligenceEngine;
@@ -144,18 +145,10 @@ Only return JSON. Do not write explanations outside the JSON block.`;
       }, true); // bypass cache for new analysis
 
       const rawText = response.text;
-      
-      // Attempt to clean and parse the JSON response from the model
-      let cleanJson = rawText.trim();
-      if (cleanJson.startsWith('```json')) {
-        cleanJson = cleanJson.substring(7);
+      const analysis = safeParseJSON(rawText, null);
+      if (!analysis) {
+        throw new Error('Unparseable extraction response');
       }
-      if (cleanJson.endsWith('```')) {
-        cleanJson = cleanJson.substring(0, cleanJson.length - 3);
-      }
-      cleanJson = cleanJson.trim();
-
-      const analysis = JSON.parse(cleanJson);
       await this.saveExtractedEntities(entry, analysis);
     } catch (e: any) {
       logger.warn('AIIntelligenceEngine', 'Gemini JSON parsing failed or was incomplete. Falling back to local rule-based extractor.', e);

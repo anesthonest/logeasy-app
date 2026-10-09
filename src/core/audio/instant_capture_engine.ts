@@ -9,6 +9,7 @@ import { localDB, LocalJournalEntry } from '../database/local_db';
 import { logger } from '../analytics/logger';
 import { backgroundJobEngine } from '../intelligence/background_job_engine';
 import { intelligentConnectionEngine } from '../intelligence/intelligent_connection_engine';
+import { transcriptionQueueManager } from './transcription_queue';
 
 export type CaptureType = 'text' | 'voice' | 'quick_note' | 'photo_screenshot';
 
@@ -97,6 +98,16 @@ export class InstantCaptureEngine {
       { userId: payload.userId, entryId: newEntry.id },
       'P2'
     );
+
+    // 3. For voice captures, enqueue to offline durable transcription queue
+    if (payload.type === 'voice' && payload.audioBlob) {
+      transcriptionQueueManager.enqueue({
+        entryId: newEntry.id,
+        userId: payload.userId,
+        audioBlob: payload.audioBlob,
+        audioDurationSeconds: payload.audioDurationSeconds || 0,
+      });
+    }
 
     return newEntry;
   }

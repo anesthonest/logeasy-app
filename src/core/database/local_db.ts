@@ -1160,6 +1160,41 @@ class LocalDatabase {
     const list = await this.getByUserIdFromStore<any>('ai_access_policies', userId);
     return list.length > 0 ? list[0] : null;
   }
+
+  /**
+   * Complete Sovereign Data Purge
+   * Irreversibly purges ALL user entries across all stores (Journals, Sync, AI, HIOS, Vault)
+   */
+  public async wipeAllUserData(userId: string): Promise<void> {
+    logger.info('LocalDatabase', `Executing complete forensic data wipe for user: ${userId}`);
+    const db = await this.getDB();
+    const allStoreNames = Array.from(db.objectStoreNames);
+
+    for (const storeName of allStoreNames) {
+      try {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+
+        if (store.indexNames.contains('userId')) {
+          const index = store.index('userId');
+          const request = index.getAllKeys(userId);
+          await new Promise<void>((resolve, reject) => {
+            request.onsuccess = () => {
+              const keys = request.result;
+              for (const k of keys) {
+                store.delete(k);
+              }
+              resolve();
+            };
+            request.onerror = () => reject(request.error);
+          });
+        }
+      } catch (err) {
+        logger.warn('LocalDatabase', `Wipe pass skipped store ${storeName}`, err);
+      }
+    }
+    logger.info('LocalDatabase', `Forensic wipe finished for user: ${userId}`);
+  }
 }
 
 export const localDB = LocalDatabase.getInstance();
