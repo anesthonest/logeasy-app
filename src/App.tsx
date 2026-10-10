@@ -5,7 +5,7 @@ import {
   RefreshCw, Sliders, Settings, Terminal, Bell, User, LogIn, LogOut, Key, CheckCircle,
   AlertTriangle, Cpu, FileText, Trash2, Volume2, Lock, Moon, Sun, Eye, Heart, Info, Globe, HelpCircle, EyeOff, TrendingUp, Gem, ShieldAlert,
   Flame, ArrowRight, ChevronRight, Sparkles, Calendar, BookOpen, Clock, LayoutGrid, Check, Plus, Search, X,
-  Zap, Network, Archive, Compass
+  Zap, Network, Archive, Compass, Share2, Gauge, FlaskConical
 } from 'lucide-react';
 
 // Core Imports
@@ -18,6 +18,7 @@ import { audioEngine, AudioMetadata } from './core/audio/audio_engine';
 import { notificationManager, LocalNotification } from './core/notifications/notification_manager';
 import { authService, AuthSession, UserProfile } from './features/auth/auth_service';
 import { settingsProvider, AppSettings } from './features/settings/settings_provider';
+import { demoModeService } from './core/demo/demo_mode_service';
 import VoiceJournalDashboard from './components/voice/VoiceJournalDashboard';
 import AIIntelligenceDashboard from './components/voice/AIIntelligenceDashboard';
 import PersonalIntelligenceEngine from './components/voice/PersonalIntelligenceEngine';
@@ -28,6 +29,7 @@ import HomeDashboard from './components/voice/HomeDashboard';
 import SimpleInsightsDashboard from './components/voice/SimpleInsightsDashboard';
 import ProfileSettingsConsole from './components/voice/ProfileSettingsConsole';
 import ColorTagPicker, { ColorTagBadge, DEFAULT_SUGGESTED_TAGS } from './components/voice/ColorTagPicker';
+import DemonstrationBanner from './components/voice/DemonstrationBanner';
 
 // Master Intelligence Components
 import ConnectionsView from './components/voice/ConnectionsView';
@@ -42,6 +44,10 @@ import InstantCaptureModal from './components/voice/InstantCaptureModal';
 const HIOSDashboard = React.lazy(() => import('./components/voice/HIOSDashboard'));
 const AIReflectionCoach = React.lazy(() => import('./components/voice/AIReflectionCoach'));
 const OnboardingWizard = React.lazy(() => import('./components/voice/OnboardingWizard'));
+const ProductValidationHub = React.lazy(() => import('./components/voice/ProductValidationHub'));
+const PublicLandingPage = React.lazy(() => import('./components/voice/PublicLandingPage'));
+const ReleaseGateConsole = React.lazy(() => import('./components/voice/ReleaseGateConsole'));
+const ShareReflectionCardModal = React.lazy(() => import('./components/voice/ShareReflectionCardModal'));
 
 export type MainTab = 
   | 'home' 
@@ -53,6 +59,9 @@ export type MainTab =
   | 'archive' 
   | 'insights' 
   | 'coach' 
+  | 'validation'
+  | 'release_gate'
+  | 'landing'
   | 'diagnostics' 
   | 'profile';
 
@@ -72,6 +81,7 @@ export default function App() {
     return localStorage.getItem('logeasy_onboarded') !== 'true';
   });
   const [showInstantCaptureModal, setShowInstantCaptureModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [devModeActive, setDevModeActive] = useState(() => {
     return localStorage.getItem('logeasy_dev_mode') === 'true';
   });
@@ -171,6 +181,10 @@ export default function App() {
 
   // Sync entries list
   const reloadLocalEntries = async () => {
+    if (demoModeService.isEnabled()) {
+      setLocalEntries(demoModeService.getDemoEntries());
+      return;
+    }
     const uid = session.user?.uid || 'guest_user';
     const list = await localDB.getJournalEntries(uid);
     setLocalEntries(list);
@@ -178,6 +192,11 @@ export default function App() {
 
   // Subscriptions setup
   useEffect(() => {
+    // 0. Demo mode changes
+    const unsubDemo = demoModeService.subscribe(() => {
+      reloadLocalEntries();
+    });
+
     // 1. Logger
     const unsubLogger = logger.subscribe((entry) => {
       setLogs((prev) => [...prev.slice(-200), entry]); // Keep last 200 logs
@@ -208,6 +227,7 @@ export default function App() {
     logger.info('SystemBootstrap', 'All React subscription listeners connected to core foundations.');
 
     return () => {
+      unsubDemo();
       unsubLogger();
       unsubAuth();
       unsubSettings();
@@ -542,6 +562,29 @@ export default function App() {
         {/* Live Subsystem Indicators */}
         <div className="flex items-center gap-2 md:gap-3">
           
+          {/* Share & Invite Trigger */}
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-500/10 hover:bg-gray-500/20 border border-gray-500/20 text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer transition-all"
+            title="Share Quote & Invitation Link"
+          >
+            <Share2 className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Invite & Share</span>
+          </button>
+
+          {/* Public Overview Switcher */}
+          <button
+            onClick={() => setActiveTab(activeTab === 'landing' ? 'home' : 'landing')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-[11px] font-bold cursor-pointer transition-all ${
+              activeTab === 'landing'
+                ? 'bg-cyan-500 text-white border-cyan-400 shadow-sm'
+                : 'bg-gray-500/10 hover:bg-gray-500/20 border-gray-500/20 text-gray-300'
+            }`}
+          >
+            <Compass className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">{activeTab === 'landing' ? 'Close Tour' : 'Public Tour'}</span>
+          </button>
+
           {/* Instant Capture Quick Trigger */}
           <button
             onClick={() => setShowInstantCaptureModal(true)}
@@ -595,6 +638,9 @@ export default function App() {
         </div>
       </header>
 
+      {/* DEMONSTRATION MODE BANNER */}
+      <DemonstrationBanner onExitDemo={reloadLocalEntries} />
+
       {/* 2. SYSTEM BRIEF DESCRIPTION (Hides unless DevMode is toggled!) */}
       {devModeActive && (
         <div className="px-6 py-3 bg-cyan-950/20 border-b border-cyan-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs font-mono">
@@ -637,6 +683,9 @@ export default function App() {
             { id: 'archive', label: 'My Life Archive', icon: Archive },
             { id: 'insights', label: 'HIOS Operating System', icon: Cpu },
             { id: 'coach', label: 'Reflection Coach', icon: Sparkles },
+            { id: 'validation', label: 'Product Validation & PMF', icon: TrendingUp, tag: 'Phase 2' },
+            { id: 'release_gate', label: 'Release Gate & Launch', icon: Gauge, tag: 'Phase 3' },
+            { id: 'landing', label: 'Public Tour & Mission', icon: Compass },
             { id: 'diagnostics', label: 'Agent Diagnostics', icon: Terminal },
             { id: 'profile', label: 'Private Profile', icon: User },
           ].map((item) => {
@@ -1306,6 +1355,48 @@ export default function App() {
               {activeTab === 'diagnostics' && (
                 <AgentDiagnosticsDashboard userId={session.user?.uid || 'guest_user'} />
               )}
+
+              {/* TAB 12: PHASE 2 PRODUCT VALIDATION & PMF */}
+              {activeTab === 'validation' && (
+                <React.Suspense fallback={
+                  <div className="p-12 flex flex-col items-center justify-center text-center space-y-3">
+                    <Activity className="h-6 w-6 text-cyan-400 animate-spin" />
+                    <p className="text-xs text-gray-400">Loading Product Validation Hub...</p>
+                  </div>
+                }>
+                  <ProductValidationHub />
+                </React.Suspense>
+              )}
+
+              {/* TAB 13: PHASE 3 RELEASE GATE & PUBLIC LAUNCH */}
+              {activeTab === 'release_gate' && (
+                <React.Suspense fallback={
+                  <div className="p-12 flex flex-col items-center justify-center text-center space-y-3">
+                    <Activity className="h-6 w-6 text-cyan-400 animate-spin" />
+                    <p className="text-xs text-gray-400">Loading Release Gate Console...</p>
+                  </div>
+                }>
+                  <ReleaseGateConsole />
+                </React.Suspense>
+              )}
+
+              {/* TAB 14: PUBLIC LANDING & STORY TOUR */}
+              {activeTab === 'landing' && (
+                <React.Suspense fallback={
+                  <div className="p-12 flex flex-col items-center justify-center text-center space-y-3">
+                    <Activity className="h-6 w-6 text-cyan-400 animate-spin" />
+                    <p className="text-xs text-gray-400">Loading Public Tour...</p>
+                  </div>
+                }>
+                  <PublicLandingPage
+                    onEnterApp={() => setActiveTab('home')}
+                    onLaunchDemo={() => {
+                      reloadLocalEntries();
+                      setActiveTab('home');
+                    }}
+                  />
+                </React.Suspense>
+              )}
             </motion.div>
           </AnimatePresence>
         </section>
@@ -1429,7 +1520,11 @@ export default function App() {
       <AnimatePresence>
         {showOnboarding && (
           <React.Suspense fallback={null}>
-            <OnboardingWizard onClose={() => setShowOnboarding(false)} />
+            <OnboardingWizard
+              userId={session.user?.uid || 'guest_user'}
+              onClose={() => setShowOnboarding(false)}
+              onEntryCreated={reloadLocalEntries}
+            />
           </React.Suspense>
         )}
       </AnimatePresence>
@@ -1443,6 +1538,16 @@ export default function App() {
           reloadLocalEntries();
         }}
       />
+
+      {/* SHARE & INVITATION MODAL */}
+      <React.Suspense fallback={null}>
+        <ShareReflectionCardModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          userId={session.user?.uid || 'guest_user'}
+          entry={localEntries.length > 0 ? localEntries[0] : null}
+        />
+      </React.Suspense>
 
     </div>
   );

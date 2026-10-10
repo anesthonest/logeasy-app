@@ -7,6 +7,8 @@ import {
 import { intelligentConnectionEngine, IntelligentConnection, ConnectionDomain } from '../../core/intelligence/intelligent_connection_engine';
 import { localDB, LocalJournalEntry } from '../../core/database/local_db';
 import { logger } from '../../core/analytics/logger';
+import { productAnalytics } from '../../core/analytics/product_analytics';
+import { demoModeService } from '../../core/demo/demo_mode_service';
 
 interface ConnectionsViewProps {
   userId: string;
@@ -19,12 +21,18 @@ export default function ConnectionsView({ userId, onOpenEntry }: ConnectionsView
   const [loading, setLoading] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<IntelligentConnection | null>(null);
   const [supportingEntries, setSupportingEntries] = useState<LocalJournalEntry[]>([]);
+  const [feedbackGiven, setFeedbackGiven] = useState<Record<string, string>>({});
 
   const loadConnections = async (refresh: boolean = false) => {
     setLoading(true);
     try {
-      const data = await intelligentConnectionEngine.discoverConnections(userId, refresh);
-      setConnections(data);
+      if (demoModeService.isEnabled()) {
+        const demoData = demoModeService.getDemoConnections();
+        setConnections(demoData);
+      } else {
+        const data = await intelligentConnectionEngine.discoverConnections(userId, refresh);
+        setConnections(data);
+      }
     } catch (e) {
       logger.error('ConnectionsView', 'Failed loading connections', e);
     } finally {
@@ -40,9 +48,17 @@ export default function ConnectionsView({ userId, onOpenEntry }: ConnectionsView
     setSelectedConnection(conn);
     try {
       const fetched: LocalJournalEntry[] = [];
-      for (const id of conn.supportingEntryIds) {
-        const entry = await localDB.getJournalEntry(id);
-        if (entry) fetched.push(entry);
+      if (demoModeService.isEnabled()) {
+        const demoEntries = demoModeService.getDemoEntries();
+        for (const id of conn.supportingEntryIds) {
+          const entry = demoEntries.find(e => e.id === id);
+          if (entry) fetched.push(entry);
+        }
+      } else {
+        for (const id of conn.supportingEntryIds) {
+          const entry = await localDB.getJournalEntry(id);
+          if (entry) fetched.push(entry);
+        }
       }
       setSupportingEntries(fetched);
     } catch (e) {
@@ -51,10 +67,24 @@ export default function ConnectionsView({ userId, onOpenEntry }: ConnectionsView
   };
 
   const handleUpdateStatus = (connId: string, status: 'confirmed' | 'dismissed') => {
-    intelligentConnectionEngine.updateConnectionStatus(userId, connId, status);
+    if (!demoModeService.isEnabled()) {
+      intelligentConnectionEngine.updateConnectionStatus(userId, connId, status);
+    }
+    if (status === 'confirmed') {
+      productAnalytics.trackAction('magic_moment_experienced', 'value');
+    }
     setConnections(prev => prev.map(c => c.id === connId ? { ...c, userStatus: status } : c));
     if (selectedConnection?.id === connId) {
       setSelectedConnection(prev => prev ? { ...prev, userStatus: status } : null);
+    }
+  };
+
+  const handleFeedback = (connId: string, rating: 'meaningful' | 'neutral' | 'unrelated') => {
+    setFeedbackGiven(prev => ({ ...prev, [connId]: rating }));
+    productAnalytics.trackAction(`connection_feedback_${rating}`, 'intelligence');
+    if (rating === 'meaningful') {
+      productAnalytics.trackAction('magic_moment_experienced', 'value');
+      handleUpdateStatus(connId, 'confirmed');
     }
   };
 
@@ -276,6 +306,46 @@ export default function ConnectionsView({ userId, onOpenEntry }: ConnectionsView
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Contextual Feedback on Magic Moment */}
+              <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-800/40 space-y-2">
+                <div className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Did this connection make sense for your life?</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => handleFeedback(selectedConnection.id, 'meaningful')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                      feedbackGiven[selectedConnection.id] === 'meaningful'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                        : 'bg-gray-900 border-gray-700 text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    ✨ Yes, genuinely useful
+                  </button>
+                  <button
+                    onClick={() => handleFeedback(selectedConnection.id, 'neutral')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                      feedbackGiven[selectedConnection.id] === 'neutral'
+                        ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 font-bold'
+                        : 'bg-gray-900 border-gray-700 text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    Somewhat
+                  </button>
+                  <button
+                    onClick={() => handleFeedback(selectedConnection.id, 'unrelated')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                      feedbackGiven[selectedConnection.id] === 'unrelated'
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-bold'
+                        : 'bg-gray-900 border-gray-700 text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    Not really
+                  </button>
+                </div>
               </div>
 
               {/* User Agency Controls */}

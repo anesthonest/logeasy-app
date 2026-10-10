@@ -354,6 +354,29 @@ class LocalDatabase {
     });
   }
 
+  public async addEntry(entry: LocalJournalEntry): Promise<void> {
+    return this.saveJournalEntry(entry);
+  }
+
+  public async getAllEntries(): Promise<LocalJournalEntry[]> {
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('journal_entries', 'readonly');
+      const store = transaction.objectStore('journal_entries');
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const results = (request.result as LocalJournalEntry[]) || [];
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        resolve(results);
+      };
+
+      request.onerror = () => {
+        reject(request.error);
+      };
+    });
+  }
+
   public async getJournalEntries(userId: string): Promise<LocalJournalEntry[]> {
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
