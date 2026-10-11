@@ -634,6 +634,60 @@ class SecurityService {
     await this.logOperation(userId, 'security_change', `Initiated automated AES key rotation. Active key rotated to generation: ${this.keyRotationVersion}`);
     return true;
   }
+
+  // ----------------------------------------------------
+  // VERIFIED SECURE DATA EXPORT PACKAGE
+  // ----------------------------------------------------
+  public async exportUserData(userId: string): Promise<{
+    exportedAt: string;
+    userId: string;
+    recordCount: number;
+    journals: any[];
+    devices: TrustedDevice[];
+    auditLogs: AuditLogEntry[];
+  }> {
+    const { localDB } = await import('../database/local_db');
+    const entries = await localDB.getJournalEntries(userId);
+    const devicesList = await this.getDevices(userId);
+    const auditList = await this.getAuditLogs(userId);
+
+    await this.logOperation(userId, 'export', `Generated sovereign data export containing ${entries.length} journal records`);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      userId,
+      recordCount: entries.length,
+      journals: entries,
+      devices: devicesList,
+      auditLogs: auditList
+    };
+  }
+
+  // ----------------------------------------------------
+  // FORENSIC RIGHT-TO-BE-FORGOTTEN USER DATA PURGE
+  // ----------------------------------------------------
+  public async deleteUserData(userId: string): Promise<void> {
+    // 1. Wipe IndexedDB stores via localDB
+    const { localDB } = await import('../database/local_db');
+    await localDB.wipeAllUserData(userId);
+
+    // 2. Wipe all user-specific credentials, metadata and caches from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`backups_metadata_${userId}`);
+      localStorage.removeItem(`connected_devices_${userId}`);
+      localStorage.removeItem(`privacy_consent_${userId}`);
+      localStorage.removeItem(`audit_logs_${userId}`);
+      localStorage.removeItem(`user_compliance_logs`);
+      localStorage.removeItem('security_pin_code');
+      localStorage.removeItem('security_pin_salt');
+      localStorage.removeItem('security_pin_verifier');
+      localStorage.removeItem('security_pin_attempts');
+      localStorage.removeItem('security_pin_lockout_until');
+    }
+    this.activePin = null;
+
+    logger.info('SecurityService', `Forensic user data erasure completed for user: ${userId}`);
+  }
 }
 
 export const securityService = SecurityService.getInstance();

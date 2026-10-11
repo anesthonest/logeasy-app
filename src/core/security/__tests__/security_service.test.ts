@@ -100,4 +100,55 @@ describe('LogEasy Security & Reliability Subsystem Tests', () => {
     const resolvedMerge = await syncEngine.resolveConflict(localRecord, 'merge');
     expect(resolvedMerge.transcript).toContain('[LOCAL]: I think client wins here.');
   });
+
+  test('Sanctuary AES-256-GCM Web Crypto: Encrypts with salt, IV, and authenticated ciphertext buffer', async () => {
+    const rawPayload = JSON.stringify({ secret: 'Deep reflections on purpose and legacy', level: 9 });
+    const password = 'my-high-entropy-sanctuary-key-99';
+
+    const encryptedJson = await securityService.encryptData(rawPayload, password);
+    const parsed = JSON.parse(encryptedJson);
+
+    expect(parsed.v).toBe('gcm-1.0');
+    expect(parsed.salt).toBeDefined();
+    expect(parsed.salt.length).toBe(32); // 16 bytes = 32 hex chars
+    expect(parsed.iv).toBeDefined();
+    expect(parsed.iv.length).toBe(24); // 12 bytes = 24 hex chars (standard AES-GCM nonce)
+    expect(parsed.ciphertext).toBeDefined();
+    expect(parsed.ciphertext.length).toBeGreaterThan(0);
+
+    // Decrypt with correct password
+    const decrypted = await securityService.decryptData(encryptedJson, password);
+    expect(decrypted).toBe(rawPayload);
+
+    // Wrong password fails decryption
+    await expect(securityService.decryptData(encryptedJson, 'wrong-password')).rejects.toThrow();
+  });
+
+  test('Sanctuary Forensic Purge: deleteUserData completely scrubs storage and credentials', async () => {
+    // Setup state
+    localStorage.setItem(`backups_metadata_${testUserId}`, JSON.stringify([{ id: 'b1' }]));
+    localStorage.setItem(`connected_devices_${testUserId}`, JSON.stringify([{ id: 'd1' }]));
+    await securityService.setPin(testUserId, '9999');
+    expect(securityService.getPinStatus()).toBe(true);
+
+    // Run purge
+    await securityService.deleteUserData(testUserId);
+
+    // Verify
+    expect(localStorage.getItem(`backups_metadata_${testUserId}`)).toBeNull();
+    expect(localStorage.getItem(`connected_devices_${testUserId}`)).toBeNull();
+    expect(securityService.getPinStatus()).toBe(false);
+  });
+
+  test('Sanctuary Data Portability: exportUserData compiles verified export package with audit trail', async () => {
+    const exported = await securityService.exportUserData(testUserId);
+    expect(exported.userId).toBe(testUserId);
+    expect(exported.exportedAt).toBeDefined();
+    expect(Array.isArray(exported.journals)).toBe(true);
+    expect(Array.isArray(exported.devices)).toBe(true);
+    expect(Array.isArray(exported.auditLogs)).toBe(true);
+
+    const logs = await securityService.getAuditLogs(testUserId);
+    expect(logs.some(l => l.action === 'export')).toBe(true);
+  });
 });

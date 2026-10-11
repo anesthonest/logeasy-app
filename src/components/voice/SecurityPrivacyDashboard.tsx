@@ -243,20 +243,10 @@ export default function SecurityPrivacyDashboard({ userId }: SecurityPrivacyDash
 
   const handleDeleteAllData = async () => {
     setIsDeletingAll(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     try {
-      // 1. Forensic wipe of ALL IndexedDB stores for this user (Journals, Sync, AI memories, HIOS, Vault)
-      await localDB.wipeAllUserData(userId);
-      
-      // 2. Clear security configurations & tokens
-      localStorage.removeItem(`backups_metadata_${userId}`);
-      localStorage.removeItem(`connected_devices_${userId}`);
-      localStorage.removeItem(`privacy_consent_${userId}`);
-      localStorage.removeItem('security_pin_code');
-      localStorage.removeItem('security_pin_salt');
-      localStorage.removeItem('security_pin_verifier');
-      localStorage.removeItem(`audit_logs_${userId}`);
-      
+      // Complete forensic wipe via securityService
+      await securityService.deleteUserData(userId);
       await securityService.logOperation(userId, 'account_deletion', 'Purged all local databases, sync indexes, and backups safely');
       setIsDeletingAll(false);
       triggerToast('All personal journal data, transcripts, knowledge graphs, and AI models are permanently wiped.', 'success');
@@ -572,6 +562,22 @@ export default function SecurityPrivacyDashboard({ userId }: SecurityPrivacyDash
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5 font-sans">Manage credentials, opt-out toggles, and data deletion configurations.</p>
               </div>
+            </div>
+
+            {/* Zero Ad Profiling & Sanctuary Trust Proof Banner */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-gray-900/40 to-emerald-950/30 border border-cyan-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                  <span className="text-xs font-bold text-gray-100">Sanctuary Trust Proof & Zero Ad Profiling</span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Zero Commercial Tracking Active
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-300 font-sans leading-relaxed">
+                LogEasy contains zero third-party advertising trackers, zero programmatic ad profiling SDKs, zero data brokering pipelines, and zero behavioral telemetry. Your private journals and voice audio are stored on-device in an encrypted IndexedDB vault and never sold or shared.
+              </p>
             </div>
 
             {/* Consent Swarms */}
