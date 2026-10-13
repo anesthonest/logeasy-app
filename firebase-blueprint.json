@@ -50,6 +50,44 @@
         "attempts": { "type": "number" }
       },
       "required": ["id", "entryId", "action", "payload", "createdAt", "attempts"]
+    },
+    "BackupSnapshot": {
+      "title": "BackupSnapshot",
+      "description": "An encrypted user backup metadata record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "recordCount": { "type": "number" },
+        "schemaVersion": { "type": "number" }
+      },
+      "required": ["id", "userId", "createdAt", "recordCount"]
+    },
+    "TrustedDevice": {
+      "title": "TrustedDevice",
+      "description": "A recognized device in the user sanctuary.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "lastActiveAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "An immutable access audit event.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["id", "userId", "timestamp", "action", "details"]
     }
   },
   "firestore": {
@@ -60,6 +98,18 @@
     "users/{userId}/sync_queue/{id}": {
       "schema": "SyncQueueItem",
       "description": "User offline sync queue"
+    },
+    "users/{userId}/backups/{id}": {
+      "schema": "BackupSnapshot",
+      "description": "Encrypted user backup metadata snapshots"
+    },
+    "users/{userId}/devices/{id}": {
+      "schema": "TrustedDevice",
+      "description": "Recognized trusted user devices"
+    },
+    "users/{userId}/audit_logs/{id}": {
+      "schema": "AuditLog",
+      "description": "Immutable security and audit trace records"
     }
   }
 }

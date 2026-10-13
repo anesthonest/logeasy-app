@@ -313,8 +313,8 @@ export default function PublicLandingPage({ onEnterApp, onLaunchDemo }: PublicLa
       </section>
 
       {/* 6. FOOTER */}
-      <footer className="mt-auto border-t border-gray-800/80 px-6 py-8 text-center text-xs text-gray-400 space-y-2">
-        <div className="flex items-center justify-center gap-4 text-xs font-medium text-gray-400">
+      <footer className="mt-auto border-t border-gray-800/80 px-6 py-8 text-center text-xs text-gray-400 space-y-2.5">
+        <div className="flex items-center justify-center gap-4 text-xs font-medium text-gray-400 flex-wrap">
           <button onClick={handleOpenVault} className="hover:text-cyan-400 cursor-pointer">Launch App</button>
           <span>•</span>
           <button onClick={handleStartDemo} className="hover:text-cyan-400 cursor-pointer">Sample Demo</button>
@@ -324,7 +324,10 @@ export default function PublicLandingPage({ onEnterApp, onLaunchDemo }: PublicLa
           <span>GDPR & CCPA Native</span>
         </div>
         <p className="text-[11px] text-gray-400">
-          LogEasy Personal Human Intelligence Operating System. Your life remembered with care.
+          LogEasy Personal Human Intelligence Operating System. Your life remembered with care. Private. Permanent. Warm. Intelligent.
+        </p>
+        <p className="text-[11px] text-gray-300 font-medium">
+          LogEasy — Developed by VINEXSAH TECHNOLOGIES. All rights reserved.
         </p>
       </footer>
     </div>

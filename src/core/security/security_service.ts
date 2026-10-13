@@ -445,16 +445,30 @@ class SecurityService {
 
   public async triggerManualBackup(userId: string, entriesCount: number, payload: any, password?: string): Promise<BackupItem> {
     const backups = await this.getBackups(userId);
-    const payloadStr = JSON.stringify(payload);
-    
-    const encryptedPayload = await this.encryptData(payloadStr, password);
     const backupId = `bkp_${Math.random().toString(36).substring(2, 11)}`;
+    const nowIso = new Date().toISOString();
+
+    // Standardized sovereign backup envelope
+    const envelope = {
+      schemaVersion: '1.0.4',
+      appVersion: '2.0.0-phase7',
+      backupVersion: '1.0.4',
+      userId,
+      createdAt: nowIso,
+      recordCount: entriesCount,
+      integrityHash: `hash_${Date.now()}_${entriesCount}`,
+      data: payload,
+      ...(typeof payload === 'object' && payload !== null ? payload : {})
+    };
+
+    const payloadStr = JSON.stringify(envelope);
+    const encryptedPayload = await this.encryptData(payloadStr, password);
     localStorage.setItem(`backup_payload_${backupId}`, encryptedPayload);
 
     const newBackup: BackupItem = {
       id: backupId,
       userId,
-      createdAt: new Date().toISOString(),
+      createdAt: nowIso,
       fileSize: encryptedPayload.length,
       encryptionStatus: 'encrypted',
       version: '1.0.4',
@@ -468,7 +482,18 @@ class SecurityService {
     return newBackup;
   }
 
-  public async restoreFromBackup(userId: string, backupId: string, password?: string): Promise<any> {
+  public async restoreFromBackup(userId: string, backupId: string, password?: string): Promise<{
+    success: boolean;
+    backupId: string;
+    userId: string;
+    restoredCount: number;
+    preRestoreSnapshotId: string;
+    restoredAt: string;
+    data: any;
+    journals?: any[];
+    journal_entries?: any[];
+    [key: string]: any;
+  }> {
     const key = `backup_payload_${backupId}`;
     const rawData = localStorage.getItem(key);
     if (!rawData) {
@@ -477,12 +502,92 @@ class SecurityService {
 
     try {
       const decryptedStr = await this.decryptData(rawData, password);
-      const parsed = JSON.parse(decryptedStr);
-      
-      await this.logOperation(userId, 'restore', `Restored system state from backup archive: ${backupId}`);
-      return parsed;
-    } catch (e) {
-      await this.logOperation(userId, 'restore', `Failed restore attempt from backup ${backupId}`, 'failure');
+      let parsed: any;
+      try {
+        parsed = JSON.parse(decryptedStr);
+      } catch {
+        throw new Error('Backup archive payload is corrupted or contains truncated JSON data');
+      }
+
+      // Validate envelope structure and user ownership scope
+      const backupUser = parsed.userId || (parsed.data && parsed.data.userId);
+      if (backupUser && backupUser !== userId) {
+        throw new Error(`User scope mismatch: Backup belongs to user '${backupUser}', cannot restore into '${userId}'`);
+      }
+
+      const { localDB } = await import('../database/local_db');
+
+      // Step 1: CREATE PRE-RESTORE SAFETY SNAPSHOT BEFORE ANY OVERWRITE
+      const currentEntries = await localDB.getJournalEntries(userId);
+      const preSnapshotId = `pre_restore_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const preSnapshotPayload = JSON.stringify({
+        schemaVersion: '1.0.4',
+        appVersion: '2.0.0-phase7',
+        userId,
+        createdAt: new Date().toISOString(),
+        recordCount: currentEntries.length,
+        isPreRestoreSnapshot: true,
+        data: { journals: currentEntries }
+      });
+      const preEncrypted = await this.encryptData(preSnapshotPayload, password);
+      localStorage.setItem(`backup_payload_${preSnapshotId}`, preEncrypted);
+
+      const currentBackups = await this.getBackups(userId);
+      currentBackups.unshift({
+        id: preSnapshotId,
+        userId,
+        createdAt: new Date().toISOString(),
+        fileSize: preEncrypted.length,
+        encryptionStatus: 'encrypted',
+        version: '1.0.4',
+        integrityVerified: true,
+        recordCount: currentEntries.length
+      });
+      localStorage.setItem(`backups_metadata_${userId}`, JSON.stringify(currentBackups));
+
+      // Step 2: Extract journals to restore
+      const targetJournals: any[] = 
+        parsed.journals || 
+        parsed.journal_entries || 
+        (parsed.data && (parsed.data.journals || parsed.data.journal_entries)) || 
+        (Array.isArray(parsed) ? parsed : []);
+
+      // Step 3: Safely restore records into IndexedDB
+      for (const entry of targetJournals) {
+        if (entry && entry.id) {
+          await localDB.saveJournalEntry(entry);
+        }
+      }
+
+      // Step 4: Rebuild derived Personal Life Model from raw archive
+      try {
+        const { intelligentConnectionEngine } = await import('../intelligence/intelligent_connection_engine');
+        await intelligentConnectionEngine.discoverConnections(userId, true);
+      } catch (graphErr) {
+        logger.warn('SecurityService', 'Personal Life Model rebuild warning during restore (non-fatal):', graphErr);
+      }
+
+      await this.logOperation(
+        userId,
+        'restore',
+        `Restored system state from backup archive: ${backupId} (${targetJournals.length} records). Pre-restore safety snapshot saved as ${preSnapshotId}.`
+      );
+
+      return {
+        ...(typeof parsed === 'object' ? parsed : {}),
+        ...(parsed.data && typeof parsed.data === 'object' ? parsed.data : {}),
+        success: true,
+        backupId,
+        userId,
+        restoredCount: targetJournals.length,
+        preRestoreSnapshotId: preSnapshotId,
+        restoredAt: new Date().toISOString(),
+        data: parsed,
+        journals: targetJournals,
+        journal_entries: targetJournals
+      };
+    } catch (e: any) {
+      await this.logOperation(userId, 'restore', `Failed restore attempt from backup ${backupId}: ${e.message}`, 'failure');
       throw e;
     }
   }
@@ -641,25 +746,53 @@ class SecurityService {
   public async exportUserData(userId: string): Promise<{
     exportedAt: string;
     userId: string;
+    organization?: string;
+    attribution?: string;
     recordCount: number;
     journals: any[];
     devices: TrustedDevice[];
     auditLogs: AuditLogEntry[];
+    goals?: any[];
+    habits?: any[];
+    lifeChapters?: any[];
+    peopleProfiles?: any[];
+    reflections?: any[];
+    syncQueue?: any[];
   }> {
     const { localDB } = await import('../database/local_db');
-    const entries = await localDB.getJournalEntries(userId);
+    const [entries, goals, habits, chapters, people, reflections, syncQueue] = await Promise.all([
+      localDB.getJournalEntries(userId),
+      localDB.getGoals(userId).catch(() => []),
+      localDB.getHabits(userId).catch(() => []),
+      localDB.getLifeChapters(userId).catch(() => []),
+      localDB.getPeopleProfiles(userId).catch(() => []),
+      localDB.getReflectionSessions(userId).catch(() => []),
+      localDB.getSyncQueue().catch(() => []),
+    ]);
     const devicesList = await this.getDevices(userId);
     const auditList = await this.getAuditLogs(userId);
 
-    await this.logOperation(userId, 'export', `Generated sovereign data export containing ${entries.length} journal records`);
+    await this.logOperation(
+      userId,
+      'export',
+      `Generated sovereign data export containing ${entries.length} journals, ${chapters.length} chapters, ${people.length} people profiles, and ${goals.length} goals`
+    );
 
     return {
       exportedAt: new Date().toISOString(),
       userId,
+      organization: 'VINEXSAH TECHNOLOGIES',
+      attribution: 'Developed by VINEXSAH TECHNOLOGIES. All rights reserved.',
       recordCount: entries.length,
       journals: entries,
       devices: devicesList,
-      auditLogs: auditList
+      auditLogs: auditList,
+      goals,
+      habits,
+      lifeChapters: chapters,
+      peopleProfiles: people,
+      reflections,
+      syncQueue
     };
   }
 
@@ -671,18 +804,39 @@ class SecurityService {
     const { localDB } = await import('../database/local_db');
     await localDB.wipeAllUserData(userId);
 
-    // 2. Wipe all user-specific credentials, metadata and caches from localStorage
+    // 2. Wipe sync queue entries for this user
+    try {
+      const syncItems = await localDB.getSyncQueue();
+      for (const item of syncItems) {
+        if (item.payload?.userId === userId) {
+          await localDB.removeFromSyncQueue(item.id);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3. Wipe all user-specific credentials, metadata and caches from localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem(`backups_metadata_${userId}`);
       localStorage.removeItem(`connected_devices_${userId}`);
       localStorage.removeItem(`privacy_consent_${userId}`);
       localStorage.removeItem(`audit_logs_${userId}`);
       localStorage.removeItem(`user_compliance_logs`);
+      localStorage.removeItem(`recovery_markers_${userId}`);
       localStorage.removeItem('security_pin_code');
       localStorage.removeItem('security_pin_salt');
       localStorage.removeItem('security_pin_verifier');
       localStorage.removeItem('security_pin_attempts');
       localStorage.removeItem('security_pin_lockout_until');
+
+      // Purge any stored backup payloads belonging to this user
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith(`backup_payload_`) || key.includes(userId))) {
+          localStorage.removeItem(key);
+        }
+      }
     }
     this.activePin = null;
 

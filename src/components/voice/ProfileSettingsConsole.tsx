@@ -357,6 +357,17 @@ export default function ProfileSettingsConsole({
         )}
       </div>
 
+      {/* Product & Ownership Attribution */}
+      <div className="p-4 rounded-3xl bg-gray-900/40 border border-gray-800/80 text-center space-y-1">
+        <p className="text-xs font-bold text-gray-200">LogEasy</p>
+        <p className="text-[11px] text-gray-400">
+          Developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
+        </p>
+        <p className="text-[10px] text-gray-500 font-mono">
+          © 2026 VINEXSAH TECHNOLOGIES. All rights reserved.
+        </p>
+      </div>
+
     </div>
   );
 }

@@ -101,3 +101,11 @@ service firebase.storage {
 ## 6. Future Extension Points
 - **Hardware-Backed Cryptography**: Transition key management to WebAuthn Secure Enclaves or Keychain services on mobile wrappers.
 - **Zero-Knowledge Multi-User Verification**: Implement Diffie-Hellman key sharing for shared journal collaboration pools.
+
+---
+
+## 7. Ownership & Intellectual Property
+
+LogEasy — Developed by **VINEXSAH TECHNOLOGIES**. All rights reserved.
+
+© 2026 VINEXSAH TECHNOLOGIES. All rights reserved.

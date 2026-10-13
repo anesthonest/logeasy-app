@@ -256,6 +256,10 @@ export default function OnboardingWizard({ onClose, onEntryCreated, userId = 'gu
                     <p className="text-[11px] text-gray-400">Never sold, never used to train global advertising models. You own your voice.</p>
                   </div>
                 </div>
+
+                <div className="pt-2 text-center text-[10px] text-gray-500">
+                  LogEasy — Developed by <strong className="text-gray-400 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
+                </div>
               </motion.div>
             )}
 
@@ -510,9 +514,12 @@ export default function OnboardingWizard({ onClose, onEntryCreated, userId = 'gu
                   ))}
                 </div>
 
-                <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-800/40 text-center">
-                  <span className="text-xs font-medium text-cyan-200">
+                <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-800/40 text-center space-y-1">
+                  <span className="text-xs font-medium text-cyan-200 block">
                     🌱 Welcome to LogEasy. Your personal sanctuary is ready.
+                  </span>
+                  <span className="text-[10px] text-gray-400 block">
+                    LogEasy — Developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
                   </span>
                 </div>
               </motion.div>

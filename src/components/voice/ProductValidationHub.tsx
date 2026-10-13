@@ -634,6 +634,11 @@ export default function ProductValidationHub() {
           </div>
         </div>
       )}
+
+      {/* Attribution */}
+      <div className="text-center text-[11px] text-gray-500 py-4">
+        LogEasy — Developed by <strong className="text-gray-400 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
+      </div>
     </div>
   );
 }

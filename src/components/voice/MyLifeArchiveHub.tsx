@@ -54,6 +54,8 @@ export default function MyLifeArchiveHub({ userId }: MyLifeArchiveHubProps) {
           exportDate: new Date().toISOString(),
           userId,
           product: 'LogEasy HIOS Archive',
+          developedBy: 'VINEXSAH TECHNOLOGIES',
+          copyright: 'Developed by VINEXSAH TECHNOLOGIES. All rights reserved.',
           statement: 'Your life remembered with care. Private. Permanent. Warm. Intelligent.',
           guarantee: 'Your LogEasy data is controlled by you within the capabilities provided by the service.'
         },
@@ -416,6 +418,11 @@ export default function MyLifeArchiveHub({ userId }: MyLifeArchiveHubProps) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Attribution */}
+      <div className="text-center text-[11px] text-gray-500 py-3">
+        LogEasy — Developed by <strong className="text-gray-400 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
+      </div>
     </div>
   );
 }

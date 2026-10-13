@@ -94,3 +94,11 @@ Every administrative operation is logged with detailed context for tracking:
 * **Attributes Saved**: Timestamp, Username, Role, Affected Resource, Action, Device User-Agent, Client IP, Old Value, New Value, and Risk Level (Low/Medium/High).
 * **Security Guardrails**: Aggregates authentication attempts and failed logins. Alerts are immediately triggered and logged when consecutive authentication failures exceed safe thresholds.
 * **Crashlytics Console**: Real-time stack traces help development squads quickly debug exceptions in any production build.
+
+---
+
+## 7. Ownership & Intellectual Property
+
+LogEasy — Developed by **VINEXSAH TECHNOLOGIES**. All rights reserved.
+
+© 2026 VINEXSAH TECHNOLOGIES. All rights reserved.

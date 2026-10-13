@@ -143,6 +143,11 @@ export default function ShareReflectionCardModal({
             {copiedQuote ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
             <span>{copiedQuote ? 'Quote Copied to Clipboard!' : 'Copy Quote Text for Sharing'}</span>
           </button>
+
+          {/* Attribution */}
+          <div className="text-center text-[10px] text-gray-500 pt-1">
+            LogEasy — Developed by <strong className="text-gray-400 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
+          </div>
         </div>
       </motion.div>
     </div>

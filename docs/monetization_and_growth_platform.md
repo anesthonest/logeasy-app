@@ -116,3 +116,11 @@ Conversion and session statistics are aggregated and structured under local rete
 
 * **Enterprise Teams Platform**: Standardize the billing system to support multi-seat business team subscriptions with single-sign-on.
 * **Payment Gateways**: Connect real Stripe API endpoints and Apple/Google In-App-Purchase SDK hooks. Since the business rules are decoupled inside `SubscriptionService`, swaps can be completed with zero edits to user-facing UI screens.
+
+---
+
+## 10. Ownership & Intellectual Property
+
+LogEasy — Developed by **VINEXSAH TECHNOLOGIES**. All rights reserved.
+
+© 2026 VINEXSAH TECHNOLOGIES. All rights reserved.

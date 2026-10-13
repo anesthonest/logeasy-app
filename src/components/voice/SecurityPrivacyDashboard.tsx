@@ -12,6 +12,7 @@ import { securityManager } from '../../core/security/security_manager';
 import { syncEngine, SyncStatus } from '../../core/sync/sync_engine';
 import { localDB } from '../../core/database/local_db';
 import { logger } from '../../core/analytics/logger';
+import { trustCertificationService } from '../../core/security/trust_certification_service';
 
 interface SecurityPrivacyDashboardProps {
   userId: string;
@@ -37,6 +38,7 @@ export default function SecurityPrivacyDashboard({ userId }: SecurityPrivacyDash
   // Privacy & Consent Settings
   const [consent, setConsent] = useState<PrivacyConsent>(securityService.getPrivacyConsent(userId));
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [showEvidenceMatrix, setShowEvidenceMatrix] = useState(false);
 
   // Network & Sync States
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(syncEngine.getStatus());
@@ -321,14 +323,9 @@ export default function SecurityPrivacyDashboard({ userId }: SecurityPrivacyDash
 
     try {
       const restored = await securityService.restoreFromBackup(userId, backupId, password);
-      if (restored && restored.journals) {
-        // Hydrate indexDB
-        for (const entry of restored.journals) {
-          await localDB.saveJournalEntry(entry);
-        }
-        triggerToast(`Successfully restored ${restored.journals.length} records. System state updated!`, 'success');
-        loadAuditLogs();
-      }
+      triggerToast(`Restored ${restored.restoredCount} records safely. Pre-restore safety snapshot created: ${restored.preRestoreSnapshotId}.`, 'success');
+      loadBackups();
+      loadAuditLogs();
     } catch (err: any) {
       triggerToast(err.message || 'Backup restoration or decryption integrity failed.', 'error');
     }
@@ -578,6 +575,10 @@ export default function SecurityPrivacyDashboard({ userId }: SecurityPrivacyDash
               <p className="text-[11px] text-gray-300 font-sans leading-relaxed">
                 LogEasy contains zero third-party advertising trackers, zero programmatic ad profiling SDKs, zero data brokering pipelines, and zero behavioral telemetry. Your private journals and voice audio are stored on-device in an encrypted IndexedDB vault and never sold or shared.
               </p>
+              <div className="pt-2 border-t border-cyan-500/15 text-[10px] text-gray-400 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span>LogEasy is developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.</span>
+                <span className="font-mono text-[9px] text-cyan-400">Sanctuary Data Sovereignty</span>
+              </div>
             </div>
 
             {/* Consent Swarms */}
@@ -654,6 +655,74 @@ export default function SecurityPrivacyDashboard({ userId }: SecurityPrivacyDash
                 </div>
               </div>
             </div>
+
+            {/* Engineering Trust Certification & Evidence Status (Phase 7) */}
+            {(() => {
+              const cert = trustCertificationService.getCertificationSummary();
+              return (
+                <div className="p-4 rounded-2xl bg-gray-500/5 border border-gray-200/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-cyan-400" />
+                      <h4 className="text-xs font-bold text-gray-200">Engineering Trust Certification & Evidence Matrix</h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        {cert.greenCount} VERIFIED IN CODE
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        {cert.yellowCount} SANDBOXED / LOCAL
+                      </span>
+                      {cert.redCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                          {cert.redCount} UNVERIFIED
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-gray-400 font-sans leading-relaxed">
+                    Internal engineering trust classification based on automated test runs and verifiable client code. No vague claims or marketing seals.
+                  </p>
+
+                  <button
+                    onClick={() => setShowEvidenceMatrix(!showEvidenceMatrix)}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <span>{showEvidenceMatrix ? 'Hide Verification Audit Details' : 'View Verified Implementation Evidence (10 Criteria)'}</span>
+                    <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showEvidenceMatrix ? 'rotate-90' : ''}`} />
+                  </button>
+
+                  {showEvidenceMatrix && (
+                    <div className="space-y-2 pt-2 border-t border-gray-200/5 font-sans">
+                      {cert.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-3 rounded-xl bg-gray-950/60 border border-gray-200/5 space-y-1 text-xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-gray-200 text-[11px]">{item.claim}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                              item.status === 'GREEN'
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                : item.status === 'YELLOW'
+                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            }`}>
+                              {item.status === 'GREEN' ? 'Verified in Code & Tests' : 'Sandboxed Simulation'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-400 leading-normal">{item.technicalImplementation}</p>
+                          <div className="text-[9px] font-mono text-cyan-400/80 pt-0.5">
+                            Evidence: {item.evidence}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Export and Purge controls */}
             <div className="p-5 rounded-2xl bg-gray-500/5 border border-gray-200/10 space-y-6">

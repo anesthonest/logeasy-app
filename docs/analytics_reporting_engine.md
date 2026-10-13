@@ -62,3 +62,11 @@ Supports fully secure, printable formatted templates:
 ## 6. Extension Points
 - **Coaching Style Bindings**: Integrate newer custom personalities by appending styles to `COACHING_STYLES` in `coach_types.ts`.
 - **Additional Exporters**: Register alternative encoders within `/src/components/voice/PersonalIntelligenceEngine.tsx`.
+
+---
+
+## 7. Ownership & Intellectual Property
+
+LogEasy — Developed by **VINEXSAH TECHNOLOGIES**. All rights reserved.
+
+© 2026 VINEXSAH TECHNOLOGIES. All rights reserved.

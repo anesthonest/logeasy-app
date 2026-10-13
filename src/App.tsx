@@ -962,6 +962,10 @@ export default function App() {
                         >
                           {isRegistering ? 'Already have an active vault? Access here' : 'Need a new voice vault? Create here'}
                         </button>
+
+                        <div className="pt-3 border-t border-gray-500/10 text-center text-[10px] text-gray-500">
+                          LogEasy — Developed by <strong className="text-gray-400 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1401,6 +1405,20 @@ export default function App() {
           </AnimatePresence>
         </section>
       </main>
+
+      {/* APPLICATION FOOTER — OWNERSHIP & SOVEREIGNTY ATTRIBUTION */}
+      <footer className="border-t border-gray-200/10 py-5 px-6 text-center select-none bg-[#070b14] text-xs">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-gray-400">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-200">LogEasy</span>
+            <span className="text-gray-600 hidden sm:inline">•</span>
+            <span className="text-[11px] text-gray-400">Your life remembered with care. Private. Permanent. Warm. Intelligent.</span>
+          </div>
+          <div className="text-[11px] text-gray-400">
+            Developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
+          </div>
+        </div>
+      </footer>
 
       {/* RESPONSIVE BOTTOM NAVIGATION BAR (MOBILE/TABLET ONLY) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/10 backdrop-blur-md bg-opacity-95 bg-[#0b0f19] flex justify-around py-2 select-none shadow-lg items-center">

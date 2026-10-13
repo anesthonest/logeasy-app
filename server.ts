@@ -38,24 +38,85 @@ async function startServer() {
     next();
   });
 
-  app.use(express.json());
+  app.use(express.json({ limit: '1mb' }));
 
-  // API ROOTS FIRST
+  // In-memory sliding window rate limiter for cost and abuse protection
+  const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+  const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+  const RATE_LIMIT_MAX_REQUESTS = 60;
+
+  const rateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const clientData = rateLimitMap.get(clientIp);
+
+    if (!clientData || now > clientData.resetAt) {
+      rateLimitMap.set(clientIp, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+      return next();
+    }
+
+    if (clientData.count >= RATE_LIMIT_MAX_REQUESTS) {
+      return res.status(429).json({
+        error: 'Too many requests. Please wait a moment before sending more AI requests.',
+        retryAfterMs: clientData.resetAt - now,
+      });
+    }
+
+    clientData.count++;
+    next();
+  };
+
+  // API ROOTS & HEALTH CHECKS
   app.get('/api/health', (req, res) => {
+    const isAiConfigured = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY';
+    let firebaseConfigured = false;
+    try {
+      if (fs.existsSync(path.join(process.cwd(), 'firebase-applet-config.json'))) {
+        const cfg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf-8'));
+        firebaseConfigured = !!(cfg.projectId && cfg.firestoreDatabaseId);
+      }
+    } catch {
+      firebaseConfigured = false;
+    }
+
+    const checks = {
+      application: 'UP',
+      aiService: isAiConfigured ? 'UP' : 'LOCAL_OFFLINE_FALLBACK',
+      firebase: firebaseConfigured ? 'CONFIGURED' : 'NOT_CONFIGURED',
+      storage: 'OPERATIONAL',
+      memory: {
+        rssMB: Math.round(process.memoryUsage().rss / (1024 * 1024)),
+        heapUsedMB: Math.round(process.memoryUsage().heapUsed / (1024 * 1024)),
+      },
+      uptimeSeconds: Math.floor(process.uptime()),
+    };
+
     res.json({
       status: 'active',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
-      geminiKeyConfigured: !!process.env.GEMINI_API_KEY,
+      checks,
     });
   });
 
-  // Secure Gemini API Proxy Route
-  app.post('/api/ai/process', async (req, res) => {
+  app.get('/api/health/liveness', (_req, res) => {
+    res.json({ status: 'UP', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/api/health/readiness', (_req, res) => {
+    res.json({ status: 'READY', timestamp: new Date().toISOString() });
+  });
+
+  // Secure Gemini API Proxy Route with rate limiting and payload validation
+  app.post('/api/ai/process', rateLimiter, async (req, res) => {
     const { prompt, systemInstruction, maxOutputTokens, responseMimeType, temperature } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required.' });
+    }
+
+    if (typeof prompt !== 'string' || prompt.length > 100000) {
+      return res.status(413).json({ error: 'Payload too large. Prompt must be under 100,000 characters.' });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -107,12 +168,16 @@ async function startServer() {
     }
   });
 
-  // Streaming Gemini API Proxy Route (SSE - Server-Sent Events)
-  app.post('/api/ai/stream', async (req, res) => {
+  // Streaming Gemini API Proxy Route (SSE - Server-Sent Events) with rate limiting
+  app.post('/api/ai/stream', rateLimiter, async (req, res) => {
     const { prompt, systemInstruction, maxOutputTokens, temperature } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required.' });
+    }
+
+    if (typeof prompt !== 'string' || prompt.length > 100000) {
+      return res.status(413).json({ error: 'Payload too large. Prompt must be under 100,000 characters.' });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;

@@ -1,23 +1,75 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is signed in
+    // 1. GLOBAL SAFETY NET: Default-deny all unlisted paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. REUSABLE PRIMITIVES & HELPER FUNCTIONS
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to check if the owner is requesting their own data
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Match rules for user nested collections
-    match /users/{userId}/journal_entries/{id} {
-      allow read, write: if isOwner(userId);
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    match /users/{userId}/sync_queue/{id} {
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // 3. STRICT PER-USER DATA ISOLATION (ZERO CROSS-USER ACCESS)
+    match /users/{userId} {
       allow read, write: if isOwner(userId);
+
+      // User's journal entries
+      match /journal_entries/{id} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(id)
+          && incoming().userId == userId
+          && incoming().id == id;
+        allow update: if isOwner(userId)
+          && incoming().userId == userId
+          && incoming().id == id;
+      }
+
+      // Offline sync queue
+      match /sync_queue/{id} {
+        allow read, write: if isOwner(userId) && isValidId(id);
+      }
+
+      // Secure backups
+      match /backups/{id} {
+        allow read, write: if isOwner(userId) && isValidId(id);
+      }
+
+      // Registered trusted devices
+      match /devices/{id} {
+        allow read, write: if isOwner(userId) && isValidId(id);
+      }
+
+      // Audit logs (Write-once, immutable audit vault: updates and deletes are forbidden)
+      match /audit_logs/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(id);
+        allow update, delete: if false;
+      }
+
+      // Derived life model
+      match /life_model/{id} {
+        allow read, write: if isOwner(userId) && isValidId(id);
+      }
+
+      // User preferences & settings
+      match /settings/{id} {
+        allow read, write: if isOwner(userId) && isValidId(id);
+      }
     }
   }
 }
