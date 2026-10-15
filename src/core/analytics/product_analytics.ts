@@ -342,9 +342,9 @@ export class ProductAnalyticsEngine {
   public getUnitEconomics(): UnitEconomicsModel {
     return {
       currency: 'USD',
-      monthlySubscriptionPrice: 9.99,
-      annualSubscriptionPrice: 79.99,
-      lifetimePrice: 199.00,
+      monthlySubscriptionPrice: 7.99,
+      annualSubscriptionPrice: 59.99,
+      lifetimePrice: 99.00,
       voiceComputeCostPerMinute: 0.006, // Whisper WASM/local compute is $0, Cloud backup is nominal
       storageCostPerUserMonth: 0.02,
       estimatedLtvMonths: 18,

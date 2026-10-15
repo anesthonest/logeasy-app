@@ -16,6 +16,7 @@ import { safeParseJSON } from '../../core/ai/json_helper';
 import PersonalIntelligenceEngine from './PersonalIntelligenceEngine';
 import SimpleInsightsDashboard from './SimpleInsightsDashboard';
 import PersonalLifeIntelligenceHub from '../hios/PersonalLifeIntelligenceHub';
+import LogEasyLogo from './LogEasyLogo';
 
 interface HIOSDashboardProps {
   userId: string;
@@ -577,8 +578,8 @@ Return a JSON block containing the connection. Return ONLY valid JSON, do not in
       {/* 1. TOP HERO PANEL - HIOS LOGO */}
       <div className="flex items-center justify-between flex-wrap gap-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-cyan-950/40 via-gray-900 to-indigo-950/40 border border-cyan-500/10 w-full min-w-0">
         <div className="space-y-1.5 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Cpu className="h-6 w-6 text-cyan-400 animate-pulse" />
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <LogEasyLogo variant="icon" size="sm" animated={true} />
             <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">LogEasy V8</span>
             <h2 className="text-base sm:text-lg font-black text-white tracking-tight">Human Intelligence Operating System (HIOS)</h2>
           </div>

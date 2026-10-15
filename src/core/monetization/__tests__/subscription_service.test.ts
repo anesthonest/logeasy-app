@@ -10,8 +10,8 @@ describe('Subscription Service & Monetization System', () => {
     expect(sub.status).toBe('none');
   });
 
-  test('Plan Upgrading', () => {
-    subscriptionService.upgradePlan(testUser, 'premium_monthly', 'stripe');
+  test('Plan Upgrading', async () => {
+    await subscriptionService.upgradePlan(testUser, 'premium_monthly', 'stripe');
     const updated = subscriptionService.getSubscription(testUser);
     expect(updated.plan).toBe('premium_monthly');
     expect(updated.status).toBe('active');

@@ -38,7 +38,7 @@ function assert(condition: boolean, message: string) {
   }
 }
 
-function runMonetizationTests() {
+async function runMonetizationTests() {
   const results: { name: string; passed: boolean; error?: string }[] = [];
   const testUser = `test_user_monetization_sandbox`;
 
@@ -58,7 +58,7 @@ function runMonetizationTests() {
 
   // TEST 2: Plan Upgrading
   try {
-    subscriptionService.upgradePlan(testUser, 'premium_monthly', 'stripe');
+    await subscriptionService.upgradePlan(testUser, 'premium_monthly', 'stripe');
     const updated = subscriptionService.getSubscription(testUser);
     assert(updated.plan === 'premium_monthly', 'Plan should be upgraded to premium_monthly');
     assert(updated.status === 'active', 'Plan status should be active');
@@ -277,8 +277,8 @@ export default function MonetizationDashboard({ userId }: MonetizationDashboardP
   };
 
   // Run Test Suite
-  const triggerTests = () => {
-    const results = runMonetizationTests();
+  const triggerTests = async () => {
+    const results = await runMonetizationTests();
     setTestLog(results);
     notificationManager.addNotification({
       title: 'Monetization Tests Executed',

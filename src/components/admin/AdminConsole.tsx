@@ -65,6 +65,8 @@ import { pluginManager, PluginInstance } from '../../core/plugins/plugin_manager
 import { complianceService } from '../../core/security/compliance_service';
 import { launchReadinessService, TestSuiteResult, LocalizationPack, PipelineStep } from '../../core/admin/launch_readiness_service';
 import { notificationManager } from '../../core/notifications/notification_manager';
+import { billingEngine } from '../../core/monetization/billing_engine';
+import { VerifiedTransaction, RevenueLedgerMetrics } from '../../core/monetization/billing_types';
 
 export interface AdminConsoleProps {
   userId: string;
@@ -123,6 +125,20 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
   const [newCampaignType, setNewCampaignType] = useState<Campaign['type']>('push');
   const [newCampaignAudience, setNewCampaignAudience] = useState<Campaign['targetAudience']>('all');
 
+  // Real Authoritative Revenue & Transaction Ledger States
+  const [revenueMetrics, setRevenueMetrics] = useState<RevenueLedgerMetrics>(() => billingEngine.getRevenueLedgerMetrics());
+  const [ledgerTransactions, setLedgerTransactions] = useState<VerifiedTransaction[]>(() => {
+    const allTx: VerifiedTransaction[] = [];
+    const usersMeta = adminService.getUsersMetadata();
+    for (const u of usersMeta) {
+      allTx.push(...billingEngine.getUserTransactions(u.userId));
+    }
+    allTx.push(...billingEngine.getUserTransactions('test_user_monetization'));
+    const map = new Map<string, VerifiedTransaction>();
+    for (const t of allTx) map.set(t.id, t);
+    return Array.from(map.values());
+  });
+
   // Load and refresh core administrative data
   const refreshData = () => {
     setUsers(adminService.getUsersMetadata());
@@ -131,6 +147,21 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
     setSystemHealth(adminService.getSystemHealth());
     setAIMonitoring(adminService.getAIMonitoring());
     setCampaigns(adminService.getCampaigns());
+    setRemoteConfig(adminService.getRemoteConfig());
+    setCrashes(adminService.getCrashReports());
+    setSecurityAlerts(adminService.getSecurityAlerts());
+
+    // Update real authoritative revenue & transaction ledger
+    setRevenueMetrics(billingEngine.getRevenueLedgerMetrics());
+    const allTx: VerifiedTransaction[] = [];
+    const usersMeta = adminService.getUsersMetadata();
+    for (const u of usersMeta) {
+      allTx.push(...billingEngine.getUserTransactions(u.userId));
+    }
+    allTx.push(...billingEngine.getUserTransactions('test_user_monetization'));
+    const map = new Map<string, VerifiedTransaction>();
+    for (const t of allTx) map.set(t.id, t);
+    setLedgerTransactions(Array.from(map.values()));
     setRemoteConfig(adminService.getRemoteConfig());
     setCrashes(adminService.getCrashReports());
     setSecurityAlerts(adminService.getSecurityAlerts());

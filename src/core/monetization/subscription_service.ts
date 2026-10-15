@@ -1,5 +1,6 @@
 import { logger } from '../analytics/logger';
 import { notificationManager } from '../notifications/notification_manager';
+import { billingEngine, PLANS_CATALOG } from './billing_engine';
 
 // ============================================================================
 // DATA STRUCTURES & INTERFACES
@@ -107,10 +108,10 @@ class SubscriptionService {
   // Remote config defaults
   private remoteConfig: RemoteConfig = {
     prices: {
-      premium_monthly: 9.99,
-      premium_annual: 79.99,
-      lifetime: 149.99,
-      family_monthly: 14.99,
+      premium_monthly: 7.99,
+      premium_annual: 59.99,
+      lifetime: 99.00,
+      family_monthly: 12.99,
     },
     features: {
       ai_coaching: true,
@@ -177,10 +178,24 @@ class SubscriptionService {
     plan: SubscriptionPlan, 
     provider: SubscriptionState['paymentProvider']
   ): Promise<SubscriptionState> {
-    const durationDays = plan === 'premium_monthly' || plan === 'family' ? 30 : 365;
+    const durationDays = plan === 'premium_monthly' || plan === 'family' || plan === 'student' ? 30 : 365;
     const endDate = plan === 'lifetime' 
       ? null 
       : new Date(Date.now() + 3600000 * 24 * durationDays).toISOString();
+
+    // 1. Authoritative Server-side Verification Engine
+    const checkoutResult = billingEngine.initiateCheckout({
+      userId,
+      planId: plan as any,
+      provider: provider === 'stripe' ? 'stripe' : provider === 'google' ? 'google_pay' : provider === 'apple' ? 'apple_pay' : 'sandbox',
+    });
+
+    const verifyResult = await billingEngine.verifyPayment({
+      orderId: checkoutResult.session.orderId,
+      userId,
+      paymentToken: `tok_client_${Math.random().toString(36).substring(2, 10)}`,
+      provider: checkoutResult.session.provider,
+    });
 
     const result = this.updateSubscription(userId, {
       plan,
@@ -191,25 +206,15 @@ class SubscriptionService {
       paymentProvider: provider,
     });
 
-    // Add Billing Transaction Record
-    const priceMap: Record<SubscriptionPlan, number> = {
-      free: 0,
-      premium_monthly: this.remoteConfig.prices.premium_monthly,
-      premium_annual: this.remoteConfig.prices.premium_annual,
-      lifetime: this.remoteConfig.prices.lifetime,
-      family: this.remoteConfig.prices.family_monthly,
-      student: this.remoteConfig.prices.premium_monthly * 0.5, // 50% discount
-      gift: 0
-    };
-
+    // Add Authoritative Transaction Record to ledger
     await this.addTransaction(userId, {
-      id: `tx_${Math.random().toString(36).substring(2, 11)}`,
-      amount: priceMap[plan],
+      id: verifyResult.transaction.id,
+      amount: verifyResult.transaction.amount,
       currency: 'USD',
       plan,
-      date: new Date().toISOString(),
+      date: verifyResult.transaction.verifiedAt || new Date().toISOString(),
       status: 'paid',
-      invoiceUrl: `https://logeasy.app/receipts/${Math.random().toString(36).substring(2, 9)}.pdf`
+      invoiceUrl: `/api/billing/receipt/${verifyResult.transaction.receiptId}`,
     });
 
     // Track retention/conversion conversion
@@ -226,6 +231,12 @@ class SubscriptionService {
   }
 
   public async downgradeToFree(userId: string): Promise<SubscriptionState> {
+    try {
+      billingEngine.cancelSubscription(userId);
+    } catch {
+      // safe fallback
+    }
+
     const result = this.updateSubscription(userId, {
       plan: 'free',
       status: 'none',

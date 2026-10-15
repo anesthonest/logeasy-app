@@ -355,10 +355,10 @@ class AdminService {
     const initialConfig: AdminRemoteConfig = {
       maintenanceMode: false,
       prices: {
-        premium_monthly: 9.99,
-        premium_annual: 79.99,
-        lifetime: 149.99,
-        family_monthly: 14.99
+        premium_monthly: 7.99,
+        premium_annual: 59.99,
+        lifetime: 99.00,
+        family_monthly: 12.99
       },
       aiLimits: {
         freeSummariesPerMonth: 5,

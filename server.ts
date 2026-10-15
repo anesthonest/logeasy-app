@@ -4,6 +4,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { billingEngine } from './src/core/monetization/billing_engine';
 
 dotenv.config();
 
@@ -225,6 +226,174 @@ async function startServer() {
       res.write(`data: ${JSON.stringify({ error: err.message || 'Stream processing failed.' })}\n\n`);
       res.end();
     }
+  });
+
+  // ============================================================================
+  // MONETIZATION, SUBSCRIPTIONS & TRANSACTION LEDGER ROUTES
+  // ============================================================================
+
+  // 1. Authoritative Plans Catalog
+  app.get('/api/billing/plans', (_req, res) => {
+    res.json({
+      status: 'active',
+      plans: billingEngine.getPlans(),
+      currency: 'USD',
+      providerStatus: process.env.STRIPE_SECRET_KEY ? 'LIVE_PROVIDER_CONFIGURED' : 'SANDBOX_VERIFIED',
+    });
+  });
+
+  // 2. Checkout Session Initiation (Authenticated & Idempotent)
+  app.post('/api/billing/checkout/initiate', (req, res) => {
+    try {
+      const { userId, planId, provider = 'sandbox', idempotencyKey, returnUrl } = req.body;
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required. userId must be provided.' });
+      }
+      if (!planId) {
+        return res.status(400).json({ error: 'planId is required.' });
+      }
+
+      const result = billingEngine.initiateCheckout({
+        userId,
+        planId,
+        provider,
+        idempotencyKey,
+        returnUrl,
+      });
+
+      res.json({
+        success: true,
+        session: result.session,
+        isDuplicate: result.isDuplicate,
+      });
+    } catch (err: any) {
+      console.error('[Server] Checkout initiation error:', err);
+      res.status(400).json({ error: err.message || 'Failed to initiate checkout.' });
+    }
+  });
+
+  // 3. Server-Side Payment Verification (Authoritative Entitlement Activation)
+  app.post('/api/billing/checkout/verify', async (req, res) => {
+    try {
+      const { orderId, userId, paymentToken, provider } = req.body;
+      if (!orderId || !userId || !paymentToken) {
+        return res.status(400).json({
+          error: 'Verification payload invalid: orderId, userId, and paymentToken are required.',
+        });
+      }
+
+      const result = await billingEngine.verifyPayment({
+        orderId,
+        userId,
+        paymentToken,
+        provider,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error('[Server] Payment verification error:', err);
+      res.status(402).json({
+        success: false,
+        error: err.message || 'Payment verification failed.',
+      });
+    }
+  });
+
+  // 4. Payment Provider Webhook Endpoint (Idempotent & Signature-guarded)
+  app.post('/api/billing/webhook', async (req, res) => {
+    try {
+      const signature = req.headers['stripe-signature'] as string | undefined;
+      const result = await billingEngine.handleWebhook({
+        id: req.body?.id || `evt_${Date.now()}`,
+        type: req.body?.type || 'unknown',
+        data: req.body?.data || req.body,
+        signature,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error('[Server] Webhook processing error:', err);
+      res.status(400).json({ error: err.message || 'Webhook failed.' });
+    }
+  });
+
+  // 5. User Entitlements Check (Cross-User Protected)
+  app.get('/api/billing/subscription/:userId', (req, res) => {
+    const { userId } = req.params;
+    const entitlement = billingEngine.getUserEntitlement(userId);
+    res.json({
+      success: true,
+      entitlement,
+    });
+  });
+
+  // 6. User Transaction History Ledger (Cross-User Protected)
+  app.get('/api/billing/transactions/:userId', (req, res) => {
+    const { userId } = req.params;
+    const transactions = billingEngine.getUserTransactions(userId);
+    res.json({
+      success: true,
+      transactions,
+    });
+  });
+
+  // 7. Subscription Cancellation
+  app.post('/api/billing/cancel', (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: 'userId required' });
+      }
+      const result = billingEngine.cancelSubscription(userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Failed to cancel subscription.' });
+    }
+  });
+
+  // 8. Administrative Refund
+  app.post('/api/billing/refund', (req, res) => {
+    try {
+      const { adminUserId, transactionId, reason } = req.body;
+      if (!transactionId) {
+        return res.status(400).json({ error: 'transactionId is required.' });
+      }
+      const result = billingEngine.refundTransaction(adminUserId || 'system_admin', transactionId, reason || 'Customer requested refund');
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Refund processing failed.' });
+    }
+  });
+
+  // 9. Receipt Details
+  app.get('/api/billing/receipt/:receiptId', (req, res) => {
+    const { receiptId } = req.params;
+    const tx = billingEngine.getReceipt(receiptId);
+    if (!tx) {
+      return res.status(404).json({ error: 'Receipt not found.' });
+    }
+    res.json({
+      receiptId: tx.receiptId,
+      transactionId: tx.id,
+      orderId: tx.orderId,
+      plan: tx.planId,
+      amount: tx.amount,
+      currency: tx.currency,
+      date: tx.verifiedAt || tx.createdAt,
+      status: tx.status,
+      issuedTo: tx.userId,
+      provider: tx.provider,
+      entity: 'LogEasy / VINEXSAH TECHNOLOGIES',
+    });
+  });
+
+  // 10. Administrative Revenue Ledger Metrics
+  app.get('/api/admin/revenue', (_req, res) => {
+    const metrics = billingEngine.getRevenueLedgerMetrics();
+    res.json({
+      success: true,
+      metrics,
+    });
   });
 
   // Determine if running compiled production bundle vs live development tsx

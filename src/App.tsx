@@ -30,6 +30,7 @@ import SimpleInsightsDashboard from './components/voice/SimpleInsightsDashboard'
 import ProfileSettingsConsole from './components/voice/ProfileSettingsConsole';
 import ColorTagPicker, { ColorTagBadge, DEFAULT_SUGGESTED_TAGS } from './components/voice/ColorTagPicker';
 import DemonstrationBanner from './components/voice/DemonstrationBanner';
+import LogEasyLogo from './components/voice/LogEasyLogo';
 
 // Master Intelligence Components
 import ConnectionsView from './components/voice/ConnectionsView';
@@ -549,18 +550,14 @@ export default function App() {
       {/* 1. TOP RESPONSIVE CONTROL BAR */}
       <header className="sticky top-0 z-40 border-b border-gray-800/80 bg-[#080B12]/95 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 shadow-sm w-full max-w-full">
         {/* Brand */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="p-1.5 sm:p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-cyan-400">
-            <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-1.5 select-none">
-              LogEasy
-            </h1>
-            <span className="hidden sm:inline-flex text-[9px] px-1.5 py-0.5 rounded text-cyan-400/80 font-mono tracking-wider border border-cyan-500/20 bg-cyan-500/5">
-              HIOS
-            </span>
-          </div>
+        <div className="flex items-center shrink-0">
+          <LogEasyLogo
+            variant="full"
+            size="sm"
+            badge="HIOS"
+            animated={true}
+            onClick={() => setActiveTab('home')}
+          />
         </div>
 
         {/* Action Controls - Responsively Scaled */}
@@ -1014,10 +1011,6 @@ export default function App() {
                         >
                           {isRegistering ? 'Already have an active vault? Access here' : 'Need a new voice vault? Create here'}
                         </button>
-
-                        <div className="pt-3 border-t border-gray-500/10 text-center text-[10px] text-gray-500">
-                          LogEasy — Developed by <strong className="text-gray-400 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
-                        </div>
                       </div>
                     </div>
                   )}
@@ -1463,6 +1456,7 @@ export default function App() {
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
           <div className="space-y-1">
             <div className="flex items-center justify-center md:justify-start gap-2">
+              <LogEasyLogo variant="icon" size="xs" />
               <span className="font-bold text-gray-200 tracking-tight text-sm">LogEasy</span>
               <span className="text-gray-600 hidden sm:inline">·</span>
               <span className="text-xs text-gray-400 font-normal">Personal Human Intelligence Operating System</span>

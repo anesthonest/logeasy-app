@@ -10,6 +10,7 @@ import { audioEngine } from '../../core/audio/audio_engine';
 import { speechToTextService } from '../../core/audio/speech_service';
 import { productAnalytics } from '../../core/analytics/product_analytics';
 import { logger } from '../../core/analytics/logger';
+import LogEasyLogo from './LogEasyLogo';
 
 interface OnboardingWizardProps {
   onClose: () => void;
@@ -195,10 +196,8 @@ export default function OnboardingWizard({ onClose, onEntryCreated, userId = 'gu
       >
         {/* Top Header */}
         <div className="px-6 py-4 border-b border-gray-800/80 flex items-center justify-between bg-[#0e162b]/80">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-900/30">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <LogEasyLogo variant="icon" size="xs" />
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">LogEasy Sanctuary</span>
               <span className="text-xs text-gray-400 ml-2">Step {step + 1} of 5</span>
@@ -225,8 +224,8 @@ export default function OnboardingWizard({ onClose, onEntryCreated, userId = 'gu
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-6 text-center"
               >
-                <div className="inline-flex p-4 rounded-3xl bg-cyan-950/40 border border-cyan-800/50 text-cyan-400 shadow-inner">
-                  <Shield className="h-10 w-10 text-cyan-400" />
+                <div className="flex justify-center">
+                  <LogEasyLogo variant="hero" size="xl" animated={true} />
                 </div>
                 
                 <div className="space-y-2">

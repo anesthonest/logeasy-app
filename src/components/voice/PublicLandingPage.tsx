@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { demoModeService } from '../../core/demo/demo_mode_service';
 import { productAnalytics } from '../../core/analytics/product_analytics';
+import LogEasyLogo from './LogEasyLogo';
 
 interface PublicLandingPageProps {
   onEnterApp: () => void;
@@ -56,15 +57,12 @@ export default function PublicLandingPage({ onEnterApp, onLaunchDemo }: PublicLa
       {/* 1. TOP NAV */}
       <header className="sticky top-0 z-40 border-b border-gray-800/80 bg-[#070b14]/90 backdrop-blur-md px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-950/40">
-            <Mic className="h-4.5 w-4.5 text-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-base font-black tracking-tight text-white">LogEasy</span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60 font-bold">
-              PUBLIC BETA
-            </span>
-          </div>
+          <LogEasyLogo
+            variant="full"
+            size="md"
+            badge="PUBLIC BETA"
+            animated={true}
+          />
         </div>
 
         <div className="flex items-center gap-3">
@@ -323,11 +321,15 @@ export default function PublicLandingPage({ onEnterApp, onLaunchDemo }: PublicLa
           <span>•</span>
           <span>GDPR & CCPA Native</span>
         </div>
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <LogEasyLogo variant="icon" size="xs" />
+          <span className="font-bold text-gray-200 tracking-tight text-sm">LogEasy</span>
+        </div>
         <p className="text-[11px] text-gray-400">
-          LogEasy Personal Human Intelligence Operating System. Your life remembered with care. Private. Permanent. Warm. Intelligent.
+          Your life remembered with care. Private. Permanent. Warm. Intelligent.
         </p>
-        <p className="text-[11px] text-gray-300 font-medium">
-          LogEasy — Developed by VINEXSAH TECHNOLOGIES. All rights reserved.
+        <p className="text-[11px] text-gray-400">
+          Developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
         </p>
       </footer>
     </div>
