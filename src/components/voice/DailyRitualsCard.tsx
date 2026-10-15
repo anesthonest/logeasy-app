@@ -94,8 +94,8 @@ export default function DailyRitualsCard({ userId, localEntries, onComplete }: D
       </div>
 
       {/* Mode Selector Tabs (Morning / Evening) */}
-      <div className="flex items-center justify-between gap-4 border-b border-gray-500/10 pb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-500/10 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveMode('morning')}

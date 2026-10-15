@@ -716,10 +716,10 @@ Exported secure-vault file compiled from LogEasy.`;
   };
 
   return (
-    <div className="flex-1 flex flex-col xl:flex-row gap-6 min-h-0">
+    <div className="flex-1 flex flex-col xl:flex-row gap-6 min-h-0 w-full max-w-full min-w-0">
       
       {/* LEFT COLUMN: Folders and Audio Dashboard */}
-      <div className="w-full xl:w-72 space-y-6 shrink-0 flex flex-col min-h-0">
+      <div className="w-full xl:w-72 space-y-6 shrink-0 flex flex-col min-h-0 min-w-0">
         
         {/* Quick capture button */}
         <button
@@ -762,10 +762,10 @@ Exported secure-vault file compiled from LogEasy.`;
       </div>
 
       {/* RIGHT COLUMN: Interactive Timeline & Live Workspace Editor */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 min-w-0 w-full">
         
         {/* Timeline center module */}
-        <div className="flex-1 flex flex-col space-y-4 min-h-0">
+        <div className="flex-1 flex flex-col space-y-4 min-h-0 min-w-0 w-full">
           
           {/* Dynamic Filter Search */}
           <SearchEngine

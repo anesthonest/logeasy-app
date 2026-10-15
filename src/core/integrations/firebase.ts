@@ -14,7 +14,8 @@ const firebaseConfig = {
   messagingSenderId: ((import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || firebaseConfigFallback.messagingSenderId,
   appId: ((import.meta as any).env.VITE_FIREBASE_APP_ID as string) || firebaseConfigFallback.appId,
   measurementId: ((import.meta as any).env.VITE_FIREBASE_MEASUREMENT_ID as string) || firebaseConfigFallback.measurementId || '',
-  firestoreDatabaseId: ((import.meta as any).env.VITE_FIREBASE_FIRESTORE_DATABASE_ID as string) || firebaseConfigFallback.firestoreDatabaseId || '(default)'
+  firestoreDatabaseId: ((import.meta as any).env.VITE_FIREBASE_FIRESTORE_DATABASE_ID as string) || 
+    (((import.meta as any).env.VITE_FIREBASE_PROJECT_ID && (import.meta as any).env.VITE_FIREBASE_PROJECT_ID !== firebaseConfigFallback.projectId) ? '(default)' : firebaseConfigFallback.firestoreDatabaseId)
 };
 
 // Initialize Firebase

@@ -48,11 +48,11 @@ export default function HomeDashboard({
   const latestEntry = localEntries.length > 0 ? localEntries[0] : null;
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-10">
+    <div className="w-full max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-10 min-w-0">
       
       {/* 1. WELCOME HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-gray-500/5 border border-gray-500/10 backdrop-blur-md">
-        <div className="space-y-1.5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-gray-500/5 border border-gray-500/10 backdrop-blur-md">
+        <div className="space-y-1.5 min-w-0">
           <p className="text-xs font-mono text-cyan-400 uppercase tracking-widest">{getFormattedDate()}</p>
           <h2 className="text-2xl font-black tracking-tight">{getGreeting()}</h2>
           <p className="text-xs text-gray-400">
@@ -60,7 +60,7 @@ export default function HomeDashboard({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0 self-start md:self-center">
           {onOpenInstantCapture && (
             <button
               onClick={onOpenInstantCapture}
@@ -281,7 +281,7 @@ export default function HomeDashboard({
       </div>
 
       {/* 4. PERSONAL LIFE MODEL INTELLIGENCE DISCOVERY ROW */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <button
           onClick={() => onNavigateTab('connections')}
           className="p-4 rounded-2xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/15 hover:border-cyan-500/30 text-left transition-all cursor-pointer space-y-2 group"

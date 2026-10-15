@@ -697,7 +697,7 @@ export default function AIReflectionCoach({ userId }: AIReflectionCoachProps) {
   };
 
   return (
-    <div className="flex-grow flex flex-col min-h-0 bg-transparent text-gray-100 font-sans">
+    <div className="flex-grow flex flex-col min-h-0 bg-transparent text-gray-100 font-sans w-full min-w-0 max-w-full">
       
       {/* 1. TOP HEADER STATUS */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-500/10 pb-4 mb-5">

@@ -85,6 +85,7 @@ export default function App() {
   const [devModeActive, setDevModeActive] = useState(() => {
     return localStorage.getItem('logeasy_dev_mode') === 'true';
   });
+  const [isTerminalExpanded, setIsTerminalExpanded] = useState(false);
 
   // Input States
   const [logFilter, setLogFilter] = useState<LogLevel | 'ALL'>('ALL');
@@ -543,98 +544,98 @@ export default function App() {
   }, [journalMood]);
 
   return (
-    <div className={`min-h-screen font-sans transition-all duration-300 ${settings.theme === 'dark' ? 'bg-[#0b0f19] text-gray-100' : 'bg-gray-50 text-gray-900'} flex flex-col pb-16 lg:pb-0`}>
+    <div className="min-h-screen font-sans bg-[#080B12] text-gray-100 flex flex-col pb-20 lg:pb-0 w-full max-w-full min-w-0 overflow-x-hidden">
       
-      {/* 1. TOP CONTROL BAR */}
-      <header className="sticky top-0 z-40 border-b border-gray-200/10 backdrop-blur-md bg-opacity-70 flex items-center justify-between px-6 py-3.5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-            <Volume2 className="h-5 w-5 animate-pulse" />
+      {/* 1. TOP RESPONSIVE CONTROL BAR */}
+      <header className="sticky top-0 z-40 border-b border-gray-800/80 bg-[#080B12]/95 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 shadow-sm w-full max-w-full">
+        {/* Brand */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="p-1.5 sm:p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-cyan-400">
+            <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
-          <div>
-            <h1 className="text-lg font-black tracking-tight bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-1.5 select-none">
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-1.5 select-none">
               LogEasy
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 font-mono tracking-normal">HIOS V8</span>
             </h1>
+            <span className="hidden sm:inline-flex text-[9px] px-1.5 py-0.5 rounded text-cyan-400/80 font-mono tracking-wider border border-cyan-500/20 bg-cyan-500/5">
+              HIOS
+            </span>
           </div>
         </div>
 
-        {/* Live Subsystem Indicators */}
-        <div className="flex items-center gap-2 md:gap-3">
-          
-          {/* Share & Invite Trigger */}
-          <button
-            onClick={() => setShowShareModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-500/10 hover:bg-gray-500/20 border border-gray-500/20 text-gray-200 rounded-xl text-[11px] font-bold cursor-pointer transition-all"
-            title="Share Quote & Invitation Link"
-          >
-            <Share2 className="h-3.5 w-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Invite & Share</span>
-          </button>
-
-          {/* Public Overview Switcher */}
+        {/* Action Controls - Responsively Scaled */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* Public Overview Switcher - Tablet and up */}
           <button
             onClick={() => setActiveTab(activeTab === 'landing' ? 'home' : 'landing')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-[11px] font-bold cursor-pointer transition-all ${
+            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-[11px] font-medium cursor-pointer transition-all ${
               activeTab === 'landing'
                 ? 'bg-cyan-500 text-white border-cyan-400 shadow-sm'
-                : 'bg-gray-500/10 hover:bg-gray-500/20 border-gray-500/20 text-gray-300'
+                : 'bg-gray-800/40 hover:bg-gray-800/80 border-gray-700/50 text-gray-300'
             }`}
           >
             <Compass className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">{activeTab === 'landing' ? 'Close Tour' : 'Public Tour'}</span>
+            <span>{activeTab === 'landing' ? 'Close Tour' : 'Public Tour'}</span>
+          </button>
+
+          {/* Share & Invite Trigger - Tablet and up */}
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 text-gray-300 hover:text-white rounded-xl text-[11px] font-medium cursor-pointer transition-all"
+            title="Share Quote & Invitation Link"
+          >
+            <Share2 className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden md:inline">Invite & Share</span>
           </button>
 
           {/* Instant Capture Quick Trigger */}
           <button
             onClick={() => setShowInstantCaptureModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 hover:from-cyan-500/30 hover:to-indigo-500/30 border border-cyan-500/35 text-cyan-300 rounded-xl text-[11px] font-bold cursor-pointer transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-semibold cursor-pointer transition-all shadow-sm active:scale-95"
+            title="Quick capture thought"
           >
             <Zap className="h-3.5 w-3.5 text-cyan-400" />
-            <span>Instant Capture</span>
+            <span className="hidden xs:inline sm:inline">Capture</span>
           </button>
 
-          {/* Network Toggle Simulator */}
+          {/* Network Status Toggle */}
           <button 
             onClick={toggleNetwork}
-            onMouseEnter={() => speakHelpText(syncState.isOnline ? 'Network status is online. Click to go offline.' : 'Network status is offline. Click to reconnect.')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono text-[10px] uppercase font-bold cursor-pointer transition-all ${
+            onMouseEnter={() => speakHelpText(syncState.isOnline ? 'Network status is online. Click to test offline.' : 'Network status is offline. Click to reconnect.')}
+            className={`flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border font-mono text-[10px] uppercase font-bold cursor-pointer transition-all ${
               syncState.isOnline 
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' 
-                : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
             }`}
+            title={syncState.isOnline ? 'Network: Online' : 'Network: Offline (Queued)'}
           >
+            <span className={`h-1.5 w-1.5 rounded-full ${syncState.isOnline ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
             {syncState.isOnline ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-            <span className="hidden sm:inline">{syncState.isOnline ? 'Online' : 'Offline'}</span>
+            <span className="hidden md:inline">{syncState.isOnline ? 'Online' : 'Offline'}</span>
           </button>
 
-          {/* Secure Storage state */}
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-cyan-400 font-mono text-[10px] uppercase font-bold">
-            <Shield className="h-3.5 w-3.5 text-cyan-400" />
-            <span>Vault</span>
-          </div>
-
-          {/* Live User Session */}
+          {/* User Session / Vault Button */}
           {session.isAuthenticated ? (
-            <div className="flex items-center gap-2 bg-gray-500/5 border border-gray-500/20 px-3 py-1.5 rounded-xl text-xs">
+            <button 
+              onClick={() => setActiveTab('profile')}
+              className="flex items-center gap-1.5 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/60 px-2.5 py-1.5 rounded-xl text-xs cursor-pointer transition-colors"
+            >
               <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></div>
-              <span className="text-gray-300 font-medium hidden sm:inline truncate max-w-[100px]">
+              <span className="text-gray-200 font-medium hidden sm:inline truncate max-w-[100px]">
                 {session.user?.displayName || 'User'}
               </span>
-              <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 ml-1">
-                <LogOut className="h-3.5 w-3.5" />
-              </button>
-            </div>
+              <span className="sm:hidden text-[11px] text-gray-300 font-medium">Vault</span>
+            </button>
           ) : (
             <button 
               onClick={() => { setActiveTab('profile'); speakHelpText('Connect Vault Panel Opened under Profile'); }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:opacity-90 text-white rounded-xl text-[10px] font-bold shadow-md cursor-pointer uppercase"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:opacity-90 text-white rounded-xl text-xs font-semibold shadow-sm cursor-pointer"
             >
-              <LogIn className="h-3.5 w-3.5" />
-              <span>Connect Vault</span>
+              <Key className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Connect Vault</span>
+              <span className="sm:hidden">Vault</span>
             </button>
           )}
-
         </div>
       </header>
 
@@ -643,80 +644,131 @@ export default function App() {
 
       {/* 2. SYSTEM BRIEF DESCRIPTION (Hides unless DevMode is toggled!) */}
       {devModeActive && (
-        <div className="px-6 py-3 bg-cyan-950/20 border-b border-cyan-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs font-mono">
-          <div className="flex items-start gap-2.5 text-gray-300">
+        <div className="px-4 sm:px-6 py-2.5 bg-cyan-950/20 border-b border-cyan-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs font-mono w-full max-w-full overflow-x-hidden">
+          <div className="flex items-start gap-2 text-gray-300">
             <Info className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
-            <div>
-              <p>
-                Welcome to the <strong>LogEasy System Architecture Console</strong>. All foundational services requested—including the <strong>Isar IndexedDB DB</strong>, 
-                <strong> Offline Sync Engine Queue</strong>, <strong>Secure Local Storage</strong>, and <strong>AI Abstraction Layers</strong>—are active and running in 
-                the background.
-              </p>
-            </div>
+            <p className="leading-relaxed">
+              <strong>Architecture Console Active:</strong> IndexedDB, Sync Queue, AES-256 Vault, and AI Layers operational.
+            </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {syncState.pendingCount > 0 && (
-              <div className="px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-lg flex items-center gap-1 animate-pulse">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                <span>{syncState.pendingCount} Operations Pending Sync</span>
-              </div>
+              <span className="px-2.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-lg flex items-center gap-1 text-[11px]">
+                <AlertTriangle className="h-3 w-3" />
+                <span>{syncState.pendingCount} Pending</span>
+              </span>
             )}
             {settings.accessibility.largeText && (
-              <span className="px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 rounded-md">Large Text Active</span>
+              <span className="px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 rounded text-[11px]">Large Text</span>
             )}
           </div>
         </div>
       )}
 
       {/* 3. CORE INTERACTIVE HUB */}
-      <main className="flex-1 flex flex-col lg:flex-row min-h-0">
+      <main className="flex-1 flex flex-col lg:flex-row min-h-0 w-full max-w-full overflow-x-hidden">
         
         {/* RESPONSIVE NAVIGATION SIDEBAR (DESKTOP RAIL) */}
-        <nav className="hidden lg:flex lg:w-64 border-r border-gray-200/10 p-4 flex-col gap-1.5 shrink-0 select-none">
-          {[
-            { id: 'home', label: 'Home Dashboard', icon: LayoutGrid },
-            { id: 'journal', label: 'Spoken Journal', icon: BookOpen, tag: localEntries.length > 0 ? `${localEntries.length}` : undefined },
-            { id: 'connections', label: 'Connections', icon: Network },
-            { id: 'patterns', label: 'Life Patterns', icon: Activity },
-            { id: 'habits', label: 'Soft Consistency', icon: Heart },
-            { id: 'timetravel', label: 'Time Travel & Journeys', icon: Clock },
-            { id: 'archive', label: 'My Life Archive', icon: Archive },
-            { id: 'insights', label: 'HIOS Operating System', icon: Cpu },
-            { id: 'coach', label: 'Reflection Coach', icon: Sparkles },
-            { id: 'validation', label: 'Product Validation & PMF', icon: TrendingUp, tag: 'Phase 2' },
-            { id: 'release_gate', label: 'Release Gate & Launch', icon: Gauge, tag: 'Phase 3' },
-            { id: 'landing', label: 'Public Tour & Mission', icon: Compass },
-            { id: 'diagnostics', label: 'Agent Diagnostics', icon: Terminal },
-            { id: 'profile', label: 'Private Profile', icon: User },
-          ].map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => { setActiveTab(item.id as any); speakHelpText(`${item.label} Tab Selected`); }}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold cursor-pointer transition-all ${
-                  isActive 
-                    ? 'bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 shadow-sm' 
-                    : 'text-gray-400 hover:bg-gray-500/5 hover:text-gray-200'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Icon className="h-4.5 w-4.5" />
-                  <span>{item.label}</span>
-                </div>
-                {item.tag && (
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-400 font-bold">
-                    {item.tag}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <nav className="hidden lg:flex lg:w-64 border-r border-gray-800/60 p-4 flex-col gap-4 shrink-0 select-none bg-[#080B12]/60 min-h-0 overflow-y-auto">
+          {/* Section: Core Sanctuary */}
+          <div className="space-y-1">
+            <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-gray-500 font-bold block">Sanctuary</span>
+            {[
+              { id: 'home', label: 'Home Dashboard', icon: LayoutGrid },
+              { id: 'journal', label: 'Spoken Journal', icon: BookOpen, tag: localEntries.length > 0 ? `${localEntries.length}` : undefined },
+              { id: 'connections', label: 'Connections', icon: Network },
+              { id: 'insights', label: 'HIOS Studio', icon: Cpu },
+              { id: 'coach', label: 'Reflection Coach', icon: Sparkles },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id as any); speakHelpText(`${item.label} Tab Selected`); }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                    isActive 
+                      ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-sm' 
+                      : 'text-gray-400 hover:bg-gray-800/40 hover:text-gray-200 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.tag && (
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 font-bold">
+                      {item.tag}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Section: Deep Life Exploration */}
+          <div className="space-y-1">
+            <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-gray-500 font-bold block">Deep Exploration</span>
+            {[
+              { id: 'patterns', label: 'Life Patterns', icon: Activity },
+              { id: 'habits', label: 'Soft Consistency', icon: Heart },
+              { id: 'timetravel', label: 'Time Travel', icon: Clock },
+              { id: 'archive', label: 'My Life Archive', icon: Archive },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id as any); speakHelpText(`${item.label} Tab Selected`); }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                    isActive 
+                      ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-sm' 
+                      : 'text-gray-400 hover:bg-gray-800/40 hover:text-gray-200 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Section: Product & Trust */}
+          <div className="space-y-1 pt-2 border-t border-gray-800/60">
+            <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-gray-500 font-bold block">Trust & Systems</span>
+            {[
+              { id: 'profile', label: 'Private Profile', icon: User },
+              { id: 'landing', label: 'Public Tour', icon: Compass },
+              { id: 'release_gate', label: 'Release Gate', icon: Gauge },
+              { id: 'diagnostics', label: 'Agent Diagnostics', icon: Terminal },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id as any); speakHelpText(`${item.label} Tab Selected`); }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                    isActive 
+                      ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-sm' 
+                      : 'text-gray-400 hover:bg-gray-800/40 hover:text-gray-200 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
         {/* Dynamic Panel Workspace */}
-        <section className="flex-1 p-6 overflow-y-auto min-h-0 flex flex-col gap-6">
+        <section className="flex-1 p-3.5 sm:p-5 md:p-6 lg:p-8 overflow-y-auto min-h-0 flex flex-col gap-6 w-full max-w-full overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -724,7 +776,7 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
-              className="flex-1 flex flex-col"
+              className="flex-1 flex flex-col w-full max-w-full min-w-0 overflow-x-hidden"
             >
               {/* TAB 1: HOME */}
               {activeTab === 'home' && (
@@ -1406,90 +1458,111 @@ export default function App() {
         </section>
       </main>
 
-      {/* APPLICATION FOOTER — OWNERSHIP & SOVEREIGNTY ATTRIBUTION */}
-      <footer className="border-t border-gray-200/10 py-5 px-6 text-center select-none bg-[#070b14] text-xs">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-gray-400">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-gray-200">LogEasy</span>
-            <span className="text-gray-600 hidden sm:inline">•</span>
-            <span className="text-[11px] text-gray-400">Your life remembered with care. Private. Permanent. Warm. Intelligent.</span>
+      {/* APPLICATION FOOTER — SINGLE GLOBAL SOVEREIGNTY ATTRIBUTION */}
+      <footer className="border-t border-gray-800/60 py-6 px-4 sm:px-8 bg-[#070b14] text-xs w-full max-w-full">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+          <div className="space-y-1">
+            <div className="flex items-center justify-center md:justify-start gap-2">
+              <span className="font-bold text-gray-200 tracking-tight text-sm">LogEasy</span>
+              <span className="text-gray-600 hidden sm:inline">·</span>
+              <span className="text-xs text-gray-400 font-normal">Personal Human Intelligence Operating System</span>
+            </div>
+            <p className="text-[11px] text-gray-400">
+              Your life remembered with care. Private. Permanent. Warm. Intelligent.
+            </p>
           </div>
-          <div className="text-[11px] text-gray-400">
+          <div className="text-[11px] text-gray-400 border-t border-gray-800/60 md:border-0 pt-2.5 md:pt-0">
             Developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
           </div>
         </div>
       </footer>
 
       {/* RESPONSIVE BOTTOM NAVIGATION BAR (MOBILE/TABLET ONLY) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/10 backdrop-blur-md bg-opacity-95 bg-[#0b0f19] flex justify-around py-2 select-none shadow-lg items-center">
-        {[
-          { id: 'home', label: 'Home', icon: LayoutGrid },
-          { id: 'journal', label: 'Journal', icon: BookOpen },
-        ].map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => { setActiveTab(item.id as any); speakHelpText(`${item.label} Tab Selected`); }}
-              className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-                isActive ? 'text-cyan-400' : 'text-gray-400'
-              }`}
-            >
-              <Icon className="h-4.5 w-4.5" />
-              <span className="text-[10px] font-bold font-sans">{item.label}</span>
-            </button>
-          );
-        })}
+      <nav 
+        aria-label="Mobile Navigation" 
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-800/80 bg-[#080B12]/95 backdrop-blur-lg px-2 pt-1.5 pb-[max(env(safe-area-inset-bottom,0.5rem),0.5rem)] shadow-2xl select-none"
+      >
+        <div className="grid grid-cols-5 items-center max-w-md mx-auto h-14">
+          {/* 1. Home */}
+          <button
+            onClick={() => { setActiveTab('home'); speakHelpText('Home Tab Selected'); }}
+            className={`flex flex-col items-center justify-center gap-1 h-full cursor-pointer transition-colors ${
+              activeTab === 'home' ? 'text-cyan-400 font-semibold' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <LayoutGrid className="h-5 w-5" />
+            <span className="text-[11px]">Home</span>
+          </button>
 
-        {/* Center Floating Instant Capture */}
-        <button
-          onClick={() => setShowInstantCaptureModal(true)}
-          className="p-2.5 rounded-full bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 -mt-3 border-2 border-[#0b0f19] cursor-pointer"
-          title="Instant Capture"
-        >
-          <Zap className="h-5 w-5 fill-white" />
-        </button>
+          {/* 2. Journal */}
+          <button
+            onClick={() => { setActiveTab('journal'); speakHelpText('Journal Tab Selected'); }}
+            className={`flex flex-col items-center justify-center gap-1 h-full cursor-pointer transition-colors ${
+              activeTab === 'journal' ? 'text-cyan-400 font-semibold' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <BookOpen className="h-5 w-5" />
+            <span className="text-[11px]">Journal</span>
+          </button>
 
-        {[
-          { id: 'connections', label: 'Links', icon: Network },
-          { id: 'insights', label: 'HIOS', icon: Cpu },
-          { id: 'profile', label: 'Profile', icon: User },
-        ].map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
+          {/* 3. Center Floating Capture Action */}
+          <div className="flex items-center justify-center h-full">
             <button
-              key={item.id}
-              onClick={() => { setActiveTab(item.id as any); speakHelpText(`${item.label} Tab Selected`); }}
-              className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-                isActive ? 'text-cyan-400' : 'text-gray-400'
-              }`}
+              onClick={() => setShowInstantCaptureModal(true)}
+              className="h-11 w-11 rounded-full bg-gradient-to-tr from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/30 flex items-center justify-center -mt-3.5 border-2 border-[#080B12] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              title="Quick Capture"
+              aria-label="Capture something from your life"
             >
-              <Icon className="h-4.5 w-4.5" />
-              <span className="text-[10px] font-bold font-sans">{item.label}</span>
+              <Zap className="h-5 w-5 fill-white" />
             </button>
-          );
-        })}
+          </div>
+
+          {/* 4. Links */}
+          <button
+            onClick={() => { setActiveTab('connections'); speakHelpText('Links Tab Selected'); }}
+            className={`flex flex-col items-center justify-center gap-1 h-full cursor-pointer transition-colors ${
+              activeTab === 'connections' ? 'text-cyan-400 font-semibold' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Network className="h-5 w-5" />
+            <span className="text-[11px]">Links</span>
+          </button>
+
+          {/* 5. Profile */}
+          <button
+            onClick={() => { setActiveTab('profile'); speakHelpText('Profile Tab Selected'); }}
+            className={`flex flex-col items-center justify-center gap-1 h-full cursor-pointer transition-colors ${
+              activeTab === 'profile' ? 'text-cyan-400 font-semibold' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <User className="h-5 w-5" />
+            <span className="text-[11px]">Profile</span>
+          </button>
+        </div>
       </nav>
 
-      {/* 4. REAL-TIME LOG TELEMETRY TERMINAL (Hides unless DevMode is toggled!) */}
+      {/* 4. REAL-TIME LOG TELEMETRY TERMINAL (Collapsible Drawer, hides unless DevMode is toggled!) */}
       {devModeActive && (
-        <footer className="h-48 border-t border-gray-200/10 flex flex-col min-h-0 bg-[#070b13] shrink-0 font-mono text-[11px] select-text">
-          <div className="flex items-center justify-between px-6 py-2 bg-[#090e19] border-b border-gray-200/10">
-            <div className="flex items-center gap-2.5">
-              <Terminal className="h-4 w-4 text-cyan-400" />
-              <span className="font-bold text-gray-300 uppercase tracking-wide">LogEasy Architectural Trace Log Terminal</span>
+        <div className="border-t border-gray-800/80 bg-[#070b13] font-mono text-[11px] select-text z-30 transition-all duration-200">
+          <div 
+            onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
+            className="flex items-center justify-between px-4 sm:px-6 py-2 bg-[#090e19] border-b border-gray-800/60 cursor-pointer hover:bg-gray-800/40 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Terminal className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="font-bold text-gray-300 uppercase tracking-wide text-[10px] sm:text-[11px]">
+                Architectural Trace Log
+              </span>
+              <span className="text-[10px] text-gray-500 font-mono">({logs.length})</span>
             </div>
             
-            <div className="flex items-center gap-2.5">
-              {/* Filter */}
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <select 
                 value={logFilter}
                 onChange={(e) => setLogFilter(e.target.value as any)}
-                className="bg-gray-500/10 border border-gray-500/20 text-[10px] text-gray-400 px-2 py-0.5 rounded cursor-pointer outline-none"
+                className="bg-gray-800 border border-gray-700 text-[10px] text-gray-300 px-2 py-0.5 rounded cursor-pointer outline-none"
               >
-                <option value="ALL">All Logs</option>
+                <option value="ALL">All ({logs.length})</option>
                 <option value="INFO">INFO</option>
                 <option value="WARN">WARN</option>
                 <option value="ERROR">ERROR</option>
@@ -1498,40 +1571,54 @@ export default function App() {
 
               <button 
                 onClick={() => { logger.clearLogs(); setLogs([]); }}
-                className="text-[10px] text-gray-400 hover:text-cyan-400 transition-colors"
+                className="text-[10px] text-gray-400 hover:text-cyan-400 transition-colors px-1.5 py-0.5 rounded hover:bg-gray-800 cursor-pointer"
               >
-                Clear Logs
+                Clear
+              </button>
+
+              <button
+                onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
+                className="text-gray-400 hover:text-gray-200 p-0.5 cursor-pointer ml-1"
+                aria-label={isTerminalExpanded ? "Collapse terminal" : "Expand terminal"}
+              >
+                {isTerminalExpanded ? "▼" : "▲"}
               </button>
             </div>
           </div>
 
-          <div className="flex-1 p-4 overflow-y-auto space-y-1 scrollbar-thin">
-            {logs
-              .filter((l) => logFilter === 'ALL' || l.level === logFilter)
-              .map((l, index) => {
-                let color = 'text-gray-400';
-                if (l.level === LogLevel.WARN) color = 'text-amber-400';
-                if (l.level === LogLevel.ERROR) color = 'text-red-400 font-bold';
-                if (l.level === LogLevel.DEBUG) color = 'text-indigo-400';
+          {isTerminalExpanded && (
+            <div className="h-44 p-3 sm:p-4 overflow-y-auto space-y-1 scrollbar-thin">
+              {logs.length === 0 ? (
+                <div className="text-center text-gray-500 py-6 font-mono text-[11px]">No log events recorded yet.</div>
+              ) : (
+                logs
+                  .filter((l) => logFilter === 'ALL' || l.level === logFilter)
+                  .map((l, index) => {
+                    let color = 'text-gray-400';
+                    if (l.level === LogLevel.WARN) color = 'text-amber-400';
+                    if (l.level === LogLevel.ERROR) color = 'text-red-400 font-bold';
+                    if (l.level === LogLevel.DEBUG) color = 'text-indigo-400';
 
-                return (
-                  <div key={index} className="flex items-start gap-2.5 py-0.5 border-b border-gray-200/5 hover:bg-gray-500/5">
-                    <span className="text-gray-600 tracking-normal text-[10px] shrink-0">
-                      {new Date(l.timestamp).toLocaleTimeString()}
-                    </span>
-                    <span className={`font-bold shrink-0 text-[10px] uppercase ${color}`}>
-                      [{l.level}]
-                    </span>
-                    <span className="text-cyan-500 shrink-0 font-bold">
-                      [{l.context}]
-                    </span>
-                    <span className="text-gray-300 flex-1 whitespace-pre-wrap">{l.message}</span>
-                  </div>
-                );
-              })}
-            <div ref={logTerminalEndRef} />
-          </div>
-        </footer>
+                    return (
+                      <div key={index} className="flex items-start gap-2 py-0.5 border-b border-gray-800/40 hover:bg-gray-800/20 text-[10px] sm:text-[11px]">
+                        <span className="text-gray-500 text-[9px] shrink-0 font-mono">
+                          {new Date(l.timestamp).toLocaleTimeString()}
+                        </span>
+                        <span className={`font-bold shrink-0 uppercase ${color}`}>
+                          [{l.level}]
+                        </span>
+                        <span className="text-cyan-400 shrink-0 font-bold">
+                          [{l.context}]
+                        </span>
+                        <span className="text-gray-300 flex-1 whitespace-pre-wrap break-all">{l.message}</span>
+                      </div>
+                    );
+                  })
+              )}
+              <div ref={logTerminalEndRef} />
+            </div>
+          )}
+        </div>
       )}
 
       {/* GUIDED ONBOARDING FLOW OVERLAY */}

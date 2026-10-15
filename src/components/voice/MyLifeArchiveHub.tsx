@@ -178,7 +178,7 @@ export default function MyLifeArchiveHub({ userId }: MyLifeArchiveHubProps) {
   };
 
   return (
-    <div className="space-y-6 flex-1 flex flex-col min-h-0">
+    <div className="space-y-6 flex-1 flex flex-col min-h-0 w-full min-w-0 max-w-full">
       
       {/* Sovereignty Banner */}
       <div className="p-6 rounded-3xl bg-gray-500/5 border border-gray-500/10 space-y-3 backdrop-blur-md">
@@ -418,11 +418,6 @@ export default function MyLifeArchiveHub({ userId }: MyLifeArchiveHubProps) {
           </div>
         )}
       </AnimatePresence>
-
-      {/* Attribution */}
-      <div className="text-center text-[11px] text-gray-500 py-3">
-        LogEasy — Developed by <strong className="text-gray-400 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
-      </div>
     </div>
   );
 }

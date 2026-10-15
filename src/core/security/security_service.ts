@@ -478,6 +478,32 @@ class SecurityService {
 
     backups.unshift(newBackup);
     localStorage.setItem(`backups_metadata_${userId}`, JSON.stringify(backups));
+
+    // Cloud Disaster Recovery: Mirror encrypted snapshot envelope to Firestore if online and authenticated
+    try {
+      if (typeof window !== 'undefined' && navigator.onLine) {
+        const { db, auth } = await import('../integrations/firebase');
+        const { doc, setDoc } = await import('firebase/firestore');
+        if (auth.currentUser && auth.currentUser.uid === userId) {
+          await setDoc(doc(db, 'users', userId, 'backups', backupId), {
+            id: backupId,
+            userId,
+            createdAt: nowIso,
+            fileSize: encryptedPayload.length,
+            encryptionStatus: 'encrypted',
+            version: '1.0.4',
+            integrityVerified: true,
+            recordCount: entriesCount,
+            encryptedPayload,
+            syncedAt: nowIso
+          });
+          logger.info('SecurityService', `Disaster Recovery: Mirrored encrypted backup ${backupId} to Cloud Firestore.`);
+        }
+      }
+    } catch (cloudErr) {
+      logger.warn('SecurityService', 'Cloud disaster recovery replication note (local backup preserved):', cloudErr);
+    }
+
     await this.logOperation(userId, 'backup', `Created secure manual database snapshot with ${entriesCount} records (AES-256-GCM protected)`);
     return newBackup;
   }
@@ -495,7 +521,26 @@ class SecurityService {
     [key: string]: any;
   }> {
     const key = `backup_payload_${backupId}`;
-    const rawData = localStorage.getItem(key);
+    let rawData = localStorage.getItem(key);
+    if (!rawData) {
+      // Attempt Cloud Disaster Recovery fetch from Firestore
+      try {
+        if (typeof window !== 'undefined' && navigator.onLine) {
+          const { db, auth } = await import('../integrations/firebase');
+          const { doc, getDoc } = await import('firebase/firestore');
+          if (auth.currentUser && auth.currentUser.uid === userId) {
+            const docSnap = await getDoc(doc(db, 'users', userId, 'backups', backupId));
+            if (docSnap.exists() && docSnap.data().encryptedPayload) {
+              rawData = docSnap.data().encryptedPayload;
+              localStorage.setItem(key, rawData as string);
+              logger.info('SecurityService', `Disaster recovery: Retrieved backup snapshot ${backupId} from Cloud Firestore.`);
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn('SecurityService', 'Cloud disaster recovery fetch note:', err);
+      }
+    }
     if (!rawData) {
       throw new Error('Backup payload corrupted or missing from secure vault');
     }
@@ -597,6 +642,20 @@ class SecurityService {
     const filtered = backups.filter(b => b.id !== backupId);
     localStorage.setItem(`backups_metadata_${userId}`, JSON.stringify(filtered));
     localStorage.removeItem(`backup_payload_${backupId}`);
+
+    // Remote cloud backup deletion if synced
+    try {
+      if (typeof window !== 'undefined' && navigator.onLine) {
+        const { db, auth } = await import('../integrations/firebase');
+        const { doc, deleteDoc } = await import('firebase/firestore');
+        if (auth.currentUser && auth.currentUser.uid === userId) {
+          await deleteDoc(doc(db, 'users', userId, 'backups', backupId));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     await this.logOperation(userId, 'privacy_change', `Deleted secure backup vault snapshot: ${backupId}`);
     return true;
   }
@@ -839,6 +898,36 @@ class SecurityService {
       }
     }
     this.activePin = null;
+
+    // 4. Remote Cloud Firestore User Data Purge (Complete Right-to-be-Forgotten)
+    try {
+      if (typeof window !== 'undefined' && navigator.onLine) {
+        const { db, auth } = await import('../integrations/firebase');
+        const { collection, getDocs, deleteDoc, doc } = await import('firebase/firestore');
+        if (auth.currentUser && auth.currentUser.uid === userId) {
+          const subcollections = ['journal_entries', 'sync_queue', 'backups', 'devices', 'life_model', 'settings'];
+          for (const subcol of subcollections) {
+            try {
+              const colRef = collection(db, 'users', userId, subcol);
+              const snapshot = await getDocs(colRef);
+              for (const docSnap of snapshot.docs) {
+                await deleteDoc(doc(db, 'users', userId, subcol, docSnap.id));
+              }
+            } catch (colErr) {
+              logger.warn('SecurityService', `Subcollection remote purge note for ${subcol}:`, colErr);
+            }
+          }
+          try {
+            await deleteDoc(doc(db, 'users', userId));
+          } catch {
+            // ignore
+          }
+          logger.info('SecurityService', `Remote Firestore records completely purged for user ${userId}`);
+        }
+      }
+    } catch (remoteErr) {
+      logger.warn('SecurityService', 'Remote Firestore purge note (unauthenticated or offline):', remoteErr);
+    }
 
     logger.info('SecurityService', `Forensic user data erasure completed for user: ${userId}`);
   }

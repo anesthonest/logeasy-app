@@ -572,15 +572,15 @@ Return a JSON block containing the connection. Return ONLY valid JSON, do not in
   };
 
   return (
-    <div className="flex-1 flex flex-col space-y-6 max-w-7xl mx-auto pb-10">
+    <div className="flex-1 flex flex-col space-y-6 max-w-7xl mx-auto pb-10 w-full min-w-0">
       
       {/* 1. TOP HERO PANEL - HIOS LOGO */}
-      <div className="flex items-center justify-between flex-wrap gap-4 p-6 rounded-3xl bg-gradient-to-r from-cyan-950/40 via-gray-900 to-indigo-950/40 border border-cyan-500/10">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between flex-wrap gap-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-cyan-950/40 via-gray-900 to-indigo-950/40 border border-cyan-500/10 w-full min-w-0">
+        <div className="space-y-1.5 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <Cpu className="h-6 w-6 text-cyan-400 animate-pulse" />
             <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">LogEasy V8</span>
-            <h2 className="text-lg font-black text-white tracking-tight">Human Intelligence Operating System (HIOS)</h2>
+            <h2 className="text-base sm:text-lg font-black text-white tracking-tight">Human Intelligence Operating System (HIOS)</h2>
           </div>
           <p className="text-xs text-gray-400 max-w-xl">
             A comprehensive, private companion ecosystem to plan, decide, execute, analyze, and optimize every aspect of your life. 
@@ -589,7 +589,7 @@ Return a JSON block containing the connection. Return ONLY valid JSON, do not in
         </div>
 
         {/* Tier status indicator */}
-        <div className="flex items-center gap-2.5 bg-gray-500/5 border border-gray-500/15 p-2 rounded-2xl">
+        <div className="flex items-center gap-2.5 bg-gray-500/5 border border-gray-500/15 p-2 rounded-2xl shrink-0">
           <div className="text-right">
             <span className="text-[9px] font-mono text-gray-400 uppercase tracking-wider block">Intelligence Level</span>
             <span className="text-xs font-bold text-cyan-400">{userSubscriptionTier} Edition</span>
@@ -601,7 +601,7 @@ Return a JSON block containing the connection. Return ONLY valid JSON, do not in
       </div>
 
       {/* 2. CORE LAYOUT CO-ORDINATION Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start w-full min-w-0">
         
         {/* LEFT COLUMN: PIC Profile & Digital Self Model */}
         <div className="lg:col-span-1 space-y-6">

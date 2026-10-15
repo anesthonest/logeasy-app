@@ -75,7 +75,7 @@ export default function LifePatternsHub({ userId }: LifePatternsHubProps) {
   });
 
   return (
-    <div className="space-y-6 flex-1 flex flex-col min-h-0">
+    <div className="space-y-6 flex-1 flex flex-col min-h-0 w-full min-w-0 max-w-full">
       
       {/* Header */}
       <div className="p-6 rounded-3xl bg-gray-500/5 border border-gray-500/10 space-y-4 backdrop-blur-md">

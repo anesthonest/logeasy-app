@@ -104,18 +104,18 @@ export default function ConnectionsView({ userId, onOpenEntry }: ConnectionsView
   ];
 
   return (
-    <div className="space-y-6 flex-1 flex flex-col min-h-0">
+    <div className="space-y-6 flex-1 flex flex-col min-h-0 w-full min-w-0">
       
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-gray-500/5 border border-gray-500/10 backdrop-blur-md">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-gray-500/5 border border-gray-500/10 backdrop-blur-md w-full min-w-0">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
               Personal Life Model
             </span>
             <span className="text-gray-500 text-xs font-mono">• Incremental Graph Intelligence</span>
           </div>
-          <h2 className="text-xl font-bold flex items-center gap-2 text-white">
+          <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-white">
             <Network className="h-5 w-5 text-cyan-400" />
             <span>Intelligent Connection Engine</span>
           </h2>
@@ -136,7 +136,7 @@ export default function ConnectionsView({ userId, onOpenEntry }: ConnectionsView
       </div>
 
       {/* Domain Navigation Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-gray-500/10 select-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-gray-500/10 select-none w-full min-w-0">
         {domains.map(d => {
           const Icon = d.icon;
           const isActive = activeDomain === d.id;

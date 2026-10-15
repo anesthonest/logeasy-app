@@ -98,7 +98,7 @@ export default function ProfileSettingsConsole({
 
   if (activeSubScreen !== 'menu') {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto pb-10">
+      <div className="space-y-6 max-w-4xl mx-auto pb-10 w-full min-w-0">
         <button
           onClick={() => setActiveSubScreen('menu')}
           className="flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-white transition-all cursor-pointer border border-gray-800 px-4 py-2 rounded-2xl bg-gray-500/5 hover:bg-gray-500/10"
@@ -107,7 +107,7 @@ export default function ProfileSettingsConsole({
           <span>Back to Profile & Settings</span>
         </button>
 
-        <div className="p-1 rounded-3xl border border-gray-500/10 bg-gray-500/[0.01]">
+        <div className="p-1 rounded-3xl border border-gray-500/10 bg-gray-500/[0.01] w-full min-w-0 overflow-x-hidden">
           {activeSubScreen === 'auth' && renderAuthPanel()}
           {activeSubScreen === 'security' && <SecurityPrivacyDashboard userId={userId} />}
           {activeSubScreen === 'monetization' && <MonetizationDashboard userId={userId} />}
@@ -121,7 +121,7 @@ export default function ProfileSettingsConsole({
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto pb-10">
+    <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto pb-10 w-full min-w-0">
       
       {/* PROFILE HEADER */}
       <div className="flex items-center gap-4 p-6 rounded-3xl bg-gray-500/5 border border-gray-500/10">

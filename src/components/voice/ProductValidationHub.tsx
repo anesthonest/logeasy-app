@@ -103,9 +103,9 @@ export default function ProductValidationHub() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0 max-w-full">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-gradient-to-r from-[#0c1527] via-[#09101f] to-[#0d1629] border border-cyan-900/30 rounded-3xl shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 sm:p-6 bg-gradient-to-r from-[#0c1527] via-[#09101f] to-[#0d1629] border border-cyan-900/30 rounded-3xl shadow-xl w-full min-w-0">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-950 text-cyan-400 border border-cyan-800/60">
@@ -634,11 +634,6 @@ export default function ProductValidationHub() {
           </div>
         </div>
       )}
-
-      {/* Attribution */}
-      <div className="text-center text-[11px] text-gray-500 py-4">
-        LogEasy — Developed by <strong className="text-gray-400 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
-      </div>
     </div>
   );
 }
