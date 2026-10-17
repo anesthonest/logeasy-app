@@ -5,6 +5,9 @@ import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { billingEngine } from './src/core/monetization/billing_engine';
+import { universalPaymentService } from './src/core/monetization/universal_payments/universal_payment_service';
+import { COUNTRY_REGISTRY, LOCALIZED_PRICING, getLocalizedPlanPrice, getAvailableMethodsForCountry } from './src/core/monetization/universal_payments/country_currency_matrix';
+import { CountryCode, CurrencyCode } from './src/core/monetization/universal_payments/types';
 
 dotenv.config();
 
@@ -232,13 +235,21 @@ async function startServer() {
   // MONETIZATION, SUBSCRIPTIONS & TRANSACTION LEDGER ROUTES
   // ============================================================================
 
-  // 1. Authoritative Plans Catalog
+  // 1. Authoritative Plans Catalog & Honest Readiness Audit
   app.get('/api/billing/plans', (_req, res) => {
     res.json({
       status: 'active',
       plans: billingEngine.getPlans(),
       currency: 'USD',
       providerStatus: process.env.STRIPE_SECRET_KEY ? 'LIVE_PROVIDER_CONFIGURED' : 'SANDBOX_VERIFIED',
+      readiness: billingEngine.getProviderReadiness(),
+    });
+  });
+
+  app.get('/api/billing/provider-readiness', (_req, res) => {
+    res.json({
+      success: true,
+      readiness: billingEngine.getProviderReadiness(),
     });
   });
 
@@ -394,6 +405,206 @@ async function startServer() {
       success: true,
       metrics,
     });
+  });
+
+  // ============================================================================
+  // UNIVERSAL PAYMENTS API (BANK + VISA/MASTERCARD + MOBILE MONEY)
+  // ============================================================================
+
+  // 11. Supported Countries Registry & Dynamic Matrix
+  app.get('/api/billing/universal/countries', (_req, res) => {
+    const countries = Object.values(COUNTRY_REGISTRY).map(c => ({
+      code: c.code,
+      name: c.name,
+      defaultCurrency: c.defaultCurrency,
+      supportedCurrencies: c.supportedCurrencies,
+      supportedMethods: c.supportedMethods,
+      domesticBankRail: c.domesticBankRail,
+      carriers: c.carriers || [],
+    }));
+    res.json({ success: true, countries });
+  });
+
+  // 12. Dynamic Payment Methods for Country & Currency
+  app.get('/api/billing/universal/methods', (req, res) => {
+    const country = (req.query.country as CountryCode) || 'US';
+    const currency = (req.query.currency as CurrencyCode) || 'USD';
+    const methods = getAvailableMethodsForCountry(country, currency);
+    const countryConfig = COUNTRY_REGISTRY[country] || COUNTRY_REGISTRY.OTHER;
+
+    res.json({
+      success: true,
+      country,
+      currency,
+      methods,
+      carriers: countryConfig.carriers || [],
+      domesticBankRail: countryConfig.domesticBankRail,
+    });
+  });
+
+  // 13. Dynamic Localized Plan Pricing
+  app.get('/api/billing/universal/pricing', (req, res) => {
+    const currency = (req.query.currency as CurrencyCode) || 'USD';
+    const plans = Object.keys(LOCALIZED_PRICING).map(planId => 
+      getLocalizedPlanPrice(planId as any, currency)
+    );
+    res.json({ success: true, currency, plans });
+  });
+
+  // 14. Universal Checkout Session Creation (Bank, Card, Mobile Money)
+  app.post('/api/billing/universal/checkout', async (req, res) => {
+    try {
+      const { userId, planId, country = 'US', currency = 'USD', method = 'card', rail = 'card_visa', idempotencyKey } = req.body;
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required: userId is required.' });
+      }
+      if (!planId) {
+        return res.status(400).json({ error: 'planId is required.' });
+      }
+
+      const result = await universalPaymentService.initiateCheckout({
+        userId,
+        planId,
+        country: country as CountryCode,
+        currency: currency as CurrencyCode,
+        method,
+        rail,
+        idempotencyKey,
+      });
+
+      res.json({ success: true, checkout: result });
+    } catch (err: any) {
+      console.error('[Server] Universal checkout initiation error:', err);
+      res.status(400).json({ error: err.message || 'Universal checkout initiation failed.' });
+    }
+  });
+
+  // 15. Universal Payment Verification (Card / Token / Mobile Money)
+  app.post('/api/billing/universal/verify', async (req, res) => {
+    try {
+      const { orderId, userId, method, rail, paymentToken, cardData } = req.body;
+      if (!orderId || !userId || !method) {
+        return res.status(400).json({ error: 'orderId, userId, and method are required for payment verification.' });
+      }
+
+      const result = await universalPaymentService.verifyPayment({
+        orderId,
+        userId,
+        method,
+        rail: rail || (method === 'card' ? 'card_visa' : method === 'mobile_money' ? 'mobile_money' : 'bank_transfer'),
+        paymentToken,
+        cardData,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error('[Server] Universal payment verification error:', err);
+      res.status(402).json({ success: false, error: err.message || 'Payment verification failed.' });
+    }
+  });
+
+  // 16. Bank Transfer Proof Submission (Customer submits transfer details)
+  app.post('/api/billing/universal/bank-transfer/submit-proof', async (req, res) => {
+    try {
+      const { orderId, userId, senderName, senderBank, transferReference, transferDate, amount, currency } = req.body;
+      if (!orderId || !userId || !senderName || !transferReference) {
+        return res.status(400).json({ error: 'orderId, userId, senderName, and transferReference are required.' });
+      }
+
+      const result = await universalPaymentService.submitBankProof({
+        orderId,
+        userId,
+        senderName,
+        senderBank: senderBank || 'Customer Bank',
+        transferReference,
+        transferDate: transferDate || new Date().toISOString(),
+        amount: Number(amount) || 0,
+        currency: currency || 'USD',
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error('[Server] Bank transfer proof error:', err);
+      res.status(400).json({ error: err.message || 'Failed to submit transfer proof.' });
+    }
+  });
+
+  // 17. Admin Bank Reconciliations List
+  app.get('/api/billing/universal/bank-transfer/pending', (_req, res) => {
+    const pendingOrders = universalPaymentService.getPendingBankReconciliations();
+    res.json({ success: true, pendingOrders });
+  });
+
+  // 18. Admin Bank Transfer Reconcile (APPROVE or REJECT)
+  app.post('/api/billing/universal/bank-transfer/reconcile', async (req, res) => {
+    try {
+      const { orderId, adminId = 'admin_system', decision, reconciliationNotes } = req.body;
+      if (!orderId || !decision) {
+        return res.status(400).json({ error: 'orderId and decision (APPROVE or REJECT) are required.' });
+      }
+
+      const result = await universalPaymentService.reconcileBankTransfer({
+        orderId,
+        adminId,
+        decision,
+        reconciliationNotes,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error('[Server] Bank reconciliation error:', err);
+      res.status(400).json({ error: err.message || 'Bank reconciliation failed.' });
+    }
+  });
+
+  // 19. Mobile Money STK Push Dispatch
+  app.post('/api/billing/universal/mobile-money/stk-push', async (req, res) => {
+    try {
+      const { orderId, userId, phoneNumber, carrier, amount, currency } = req.body;
+      if (!orderId || !userId || !phoneNumber || !carrier) {
+        return res.status(400).json({ error: 'orderId, userId, phoneNumber, and carrier are required.' });
+      }
+
+      const result = await universalPaymentService.sendMobileMoneySTKPush({
+        orderId,
+        userId,
+        phoneNumber,
+        carrier,
+        amount: Number(amount) || 0,
+        currency: currency || 'KES',
+      });
+
+      res.json({ success: true, pushResult: result });
+    } catch (err: any) {
+      console.error('[Server] Mobile money STK push error:', err);
+      res.status(400).json({ error: err.message || 'STK Push dispatch failed.' });
+    }
+  });
+
+  // 20. Mobile Money Status Poll
+  app.get('/api/billing/universal/mobile-money/status/:orderId', async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const status = await universalPaymentService.pollMobileMoney(orderId);
+      res.json({ success: true, ...status });
+    } catch (err: any) {
+      res.status(404).json({ error: err.message || 'Order not found.' });
+    }
+  });
+
+  // 21. Simulated Instant Settlement (Sandbox Demo)
+  app.post('/api/billing/universal/simulate-settlement', async (req, res) => {
+    try {
+      const { orderId, userId, method = 'bank_transfer' } = req.body;
+      if (!orderId || !userId) {
+        return res.status(400).json({ error: 'orderId and userId are required.' });
+      }
+
+      const result = await universalPaymentService.simulateInstantSettlement(orderId, userId, method);
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Simulated settlement failed.' });
+    }
   });
 
   // Determine if running compiled production bundle vs live development tsx

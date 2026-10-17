@@ -67,6 +67,8 @@ import { launchReadinessService, TestSuiteResult, LocalizationPack, PipelineStep
 import { notificationManager } from '../../core/notifications/notification_manager';
 import { billingEngine } from '../../core/monetization/billing_engine';
 import { VerifiedTransaction, RevenueLedgerMetrics } from '../../core/monetization/billing_types';
+import { universalPaymentService } from '../../core/monetization/universal_payments/universal_payment_service';
+import { paymentProviderRegistry } from '../../core/monetization/universal_payments/registry';
 
 export interface AdminConsoleProps {
   userId: string;
@@ -116,6 +118,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
   const [userSearchQuery, setUserSearchQuery] = useState<string>('');
   const [ticketSearchQuery, setTicketSearchQuery] = useState<string>('');
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [pendingTransfers, setPendingTransfers] = useState<any[]>([]);
+  const [reconcileFilter, setReconcileFilter] = useState<'all' | 'UNDER_REVIEW' | 'PENDING'>('all');
+  const [reconcileNotesInput, setReconcileNotesInput] = useState<string>('');
   const [ticketReplyText, setTicketReplyText] = useState<string>('');
   const [ticketInternalNotes, setTicketInternalNotes] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<SupportUserMeta | null>(null);
@@ -174,6 +179,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
     setTestSuitesList(launchReadinessService.getTestSuites());
     setLocalizationList(launchReadinessService.getLocalizationPacks());
     setPipelineStepsList(launchReadinessService.getPipelineSteps());
+    try {
+      setPendingTransfers(universalPaymentService.getPendingBankReconciliations());
+    } catch (e) {
+      console.warn('Unable to load bank reconciliations', e);
+    }
 
     // Update active selected ticket if open
     if (selectedTicket) {
@@ -532,6 +542,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
           { id: 'users', label: 'User Registry', icon: Users },
           { id: 'support', label: 'Support Desk', icon: Ticket },
           { id: 'revenue', label: 'BI & Revenue', icon: TrendingUp },
+          { id: 'payment_reconciliation', label: 'Payment Reconciliation', icon: DollarSign },
           { id: 'ai_ops', label: 'AI Operations', icon: Cpu },
           { id: 'health', label: 'System Health', icon: Server },
           { id: 'flags', label: 'Remote Config', icon: Sliders },
@@ -1233,6 +1244,265 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ userId }) => {
                         </button>
                       </td>
                     </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --------------------------------------------------------------------
+            SUBTAB: UNIVERSAL PAYMENTS & BANK TRANSFER RECONCILIATION
+            -------------------------------------------------------------------- */}
+        {activeSubTab === 'payment_reconciliation' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-gray-200 flex items-center gap-2">
+                  <DollarSign className="h-4.5 w-4.5 text-amber-400" />
+                  <span>Universal Payment Gateway & Bank Reconciliation Console</span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Inspect manual bank transfers, customer transfer proof, and universal rail settlement status.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const orders = universalPaymentService.getPendingBankReconciliations();
+                    setPendingTransfers([...orders]);
+                    notificationManager.addNotification({
+                      title: 'Queue Refreshed',
+                      body: `Loaded ${orders.length} orders in reconciliation ledger.`,
+                      type: 'system',
+                    });
+                  }}
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold rounded-lg border border-gray-700 flex items-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Refresh Queue</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Gateway Capabilities Overview Bento */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-[#0e1424] border border-gray-500/10 rounded-xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400 font-mono uppercase">Bank Wire Rail</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">ACTIVE</span>
+                </div>
+                <div className="text-base font-bold text-white">Bank Transfer Engine</div>
+                <span className="text-[11px] text-gray-400 block">ACH, SEPA, Faster Payments, NIP, PesaLink</span>
+              </div>
+
+              <div className="p-4 bg-[#0e1424] border border-gray-500/10 rounded-xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400 font-mono uppercase">Card Gateway</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">ACTIVE</span>
+                </div>
+                <div className="text-base font-bold text-white">Visa & Mastercard</div>
+                <span className="text-[11px] text-gray-400 block">Luhn algorithm, SCA/3DS, Tokenized intake</span>
+              </div>
+
+              <div className="p-4 bg-[#0e1424] border border-gray-500/10 rounded-xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400 font-mono uppercase">Mobile Money Rail</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">ACTIVE</span>
+                </div>
+                <div className="text-base font-bold text-white">STK Push Engine</div>
+                <span className="text-[11px] text-gray-400 block">M-Pesa, MTN MoMo, Airtel Money, Vodafone</span>
+              </div>
+
+              <div className="p-4 bg-[#0e1424] border border-gray-500/10 rounded-xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400 font-mono uppercase">Offline Keys</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">VERIFIED</span>
+                </div>
+                <div className="text-base font-bold text-white">Lifetime License Keys</div>
+                <span className="text-[11px] text-gray-400 block">Cryptographic 16-character vault authorization</span>
+              </div>
+            </div>
+
+            {/* Reconciliation Filter Bar */}
+            <div className="p-4 bg-[#0e1424] border border-gray-500/10 rounded-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-500/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-200">Reconciliation Filter:</span>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setReconcileFilter('all')}
+                      className={`px-2.5 py-1 text-xs rounded-lg font-mono transition-all cursor-pointer ${
+                        reconcileFilter === 'all'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold'
+                          : 'bg-gray-800 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      All ({pendingTransfers.length})
+                    </button>
+                    <button
+                      onClick={() => setReconcileFilter('UNDER_REVIEW')}
+                      className={`px-2.5 py-1 text-xs rounded-lg font-mono transition-all cursor-pointer ${
+                        reconcileFilter === 'UNDER_REVIEW'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold'
+                          : 'bg-gray-800 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      Awaiting Review ({pendingTransfers.filter(o => o.status === 'UNDER_REVIEW').length})
+                    </button>
+                    <button
+                      onClick={() => setReconcileFilter('PENDING')}
+                      className={`px-2.5 py-1 text-xs rounded-lg font-mono transition-all cursor-pointer ${
+                        reconcileFilter === 'PENDING'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold'
+                          : 'bg-gray-800 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      Awaiting Wire ({pendingTransfers.filter(o => o.status === 'PENDING').length})
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-gray-400 font-mono">
+                  Policy: Proof does not auto-activate; administrator must reconcile.
+                </div>
+              </div>
+
+              {/* Bank Orders & Proofs Ledger */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-[11px] border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-500/20 text-gray-500">
+                      <th className="pb-2.5">Order ID & Ref</th>
+                      <th className="pb-2.5">Customer & Plan</th>
+                      <th className="pb-2.5">Amount & Rail</th>
+                      <th className="pb-2.5">Customer Submitted Proof</th>
+                      <th className="pb-2.5">Status</th>
+                      <th className="pb-2.5 text-right">Reconciliation Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-500/10">
+                    {pendingTransfers
+                      .filter(o => reconcileFilter === 'all' || o.status === reconcileFilter)
+                      .map((order) => (
+                        <tr key={order.orderId} className="hover:bg-gray-500/5 transition-colors">
+                          <td className="py-3">
+                            <div className="font-bold text-white">{order.orderId}</div>
+                            <div className="text-[10px] text-amber-400 font-mono mt-0.5">{order.referenceCode}</div>
+                          </td>
+                          <td className="py-3">
+                            <div className="text-gray-200">{order.userId}</div>
+                            <div className="text-[10px] text-gray-400 capitalize">{order.planId.replace('_', ' ')}</div>
+                          </td>
+                          <td className="py-3">
+                            <div className="text-emerald-400 font-bold">
+                              {order.currency} {order.amount.toLocaleString()}
+                            </div>
+                            <div className="text-[10px] text-gray-400">{order.instructions?.domesticRailName || 'Bank Wire'}</div>
+                          </td>
+                          <td className="py-3">
+                            {order.proof ? (
+                              <div className="space-y-0.5">
+                                <div className="text-gray-200 font-sans text-xs">
+                                  <strong>Sender:</strong> {order.proof.senderName} ({order.proof.senderBank})
+                                </div>
+                                <div className="text-[10px] text-cyan-400">
+                                  <strong>Ref:</strong> {order.proof.transferReference}
+                                </div>
+                                <div className="text-[9px] text-gray-500">
+                                  {new Date(order.proof.submittedAt).toLocaleString()}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-500 italic text-[10px]">Awaiting proof submission</span>
+                            )}
+                          </td>
+                          <td className="py-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              order.status === 'UNDER_REVIEW' 
+                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                : order.status === 'VERIFIED'
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-gray-800 text-gray-400 border border-gray-700'
+                            }`}>
+                              {order.status === 'UNDER_REVIEW' ? 'UNDER REVIEW' : order.status}
+                            </span>
+                          </td>
+                          <td className="py-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {order.status !== 'VERIFIED' && (
+                                <>
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm(`Verify and approve bank transfer for ${order.orderId} (${order.currency} ${order.amount})? This will immediately activate paid entitlements for ${order.userId}.`)) {
+                                        try {
+                                          const res = await universalPaymentService.reconcileBankTransfer({
+                                            orderId: order.orderId,
+                                            adminId: session?.username || 'alex_admin',
+                                            decision: 'APPROVE',
+                                            reconciliationNotes: reconcileNotesInput || 'Verified against bank settlement statement.',
+                                          });
+                                          notificationManager.addNotification({
+                                            title: 'Bank Transfer Reconciled',
+                                            body: `Order ${order.orderId} verified. Plan ${order.planId} activated!`,
+                                            type: 'system',
+                                          });
+                                          setPendingTransfers(universalPaymentService.getPendingBankReconciliations());
+                                        } catch (err: any) {
+                                          alert(err.message || 'Reconciliation failed.');
+                                        }
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs font-semibold cursor-pointer transition-all"
+                                  >
+                                    Verify & Activate
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      const reason = prompt('Reason for bank transfer rejection:', 'Reference not found in bank statement');
+                                      if (reason) {
+                                        try {
+                                          await universalPaymentService.reconcileBankTransfer({
+                                            orderId: order.orderId,
+                                            adminId: session?.username || 'alex_admin',
+                                            decision: 'REJECT',
+                                            reconciliationNotes: reason,
+                                          });
+                                          notificationManager.addNotification({
+                                            title: 'Bank Transfer Rejected',
+                                            body: `Order ${order.orderId} marked as rejected.`,
+                                            type: 'conflict',
+                                          });
+                                          setPendingTransfers(universalPaymentService.getPendingBankReconciliations());
+                                        } catch (err: any) {
+                                          alert(err.message || 'Rejection failed.');
+                                        }
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs font-semibold cursor-pointer transition-all"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                              {order.status === 'VERIFIED' && (
+                                <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                                  <CheckCircle2 className="h-3 w-3" /> Reconciled
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+
+                    {pendingTransfers.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                          No pending bank transfers or manual review orders in queue.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

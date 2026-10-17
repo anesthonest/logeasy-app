@@ -64,7 +64,9 @@ export type MainTab =
   | 'release_gate'
   | 'landing'
   | 'diagnostics' 
-  | 'profile';
+  | 'profile'
+  | 'billing'
+  | 'trust';
 
 export default function App() {
   // State Subscriptions
@@ -545,7 +547,7 @@ export default function App() {
   }, [journalMood]);
 
   return (
-    <div className="min-h-screen font-sans bg-[#080B12] text-gray-100 flex flex-col pb-20 lg:pb-0 w-full max-w-full min-w-0 overflow-x-hidden">
+    <div className="min-h-screen font-sans bg-[#080B12] text-gray-100 flex flex-col w-full max-w-full min-w-0">
       
       {/* 1. TOP RESPONSIVE CONTROL BAR */}
       <header className="sticky top-0 z-40 border-b border-gray-800/80 bg-[#080B12]/95 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 shadow-sm w-full max-w-full">
@@ -735,12 +737,40 @@ export default function App() {
 
           {/* Section: Product & Trust */}
           <div className="space-y-1 pt-2 border-t border-gray-800/60">
-            <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-gray-500 font-bold block">Trust & Systems</span>
+            <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-gray-500 font-bold block">Plan & Trust</span>
             {[
               { id: 'profile', label: 'Private Profile', icon: User },
-              { id: 'landing', label: 'Public Tour', icon: Compass },
+              { id: 'billing', label: 'Plan & Billing', icon: Gem },
+              { id: 'trust', label: 'Privacy & Trust', icon: Shield },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id as any); speakHelpText(`${item.label} Tab Selected`); }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                    isActive 
+                      ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-sm' 
+                      : 'text-gray-400 hover:bg-gray-800/40 hover:text-gray-200 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Section: Authorized Systems */}
+          <div className="space-y-1 pt-2 border-t border-gray-800/60">
+            <span className="px-3 text-[10px] font-mono uppercase tracking-wider text-gray-500 font-bold block">Authorized Diagnostics</span>
+            {[
               { id: 'release_gate', label: 'Release Gate', icon: Gauge },
               { id: 'diagnostics', label: 'Agent Diagnostics', icon: Terminal },
+              { id: 'landing', label: 'Public Tour', icon: Compass },
             ].map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -765,8 +795,9 @@ export default function App() {
         </nav>
 
         {/* Dynamic Panel Workspace */}
-        <section className="flex-1 p-3.5 sm:p-5 md:p-6 lg:p-8 overflow-y-auto min-h-0 flex flex-col gap-6 w-full max-w-full overflow-x-hidden">
-          <AnimatePresence mode="wait">
+        <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-y-auto">
+          <section className="flex-1 p-3.5 sm:p-5 md:p-6 lg:p-8 flex flex-col gap-6 w-full max-w-full">
+            <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 8 }}
@@ -1446,30 +1477,67 @@ export default function App() {
                   />
                 </React.Suspense>
               )}
+
+              {/* TAB 15: PLAN & BILLING */}
+              {activeTab === 'billing' && (
+                <div className="space-y-6 flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Gem className="h-5 w-5 text-cyan-400" />
+                        <span>Plan & Billing</span>
+                      </h2>
+                      <p className="text-xs text-gray-400">
+                        Manage your sanctuary subscription, receipts, offline license keys, and privacy guarantees.
+                      </p>
+                    </div>
+                  </div>
+                  <MonetizationDashboard userId={session.user?.uid || 'guest_user'} />
+                </div>
+              )}
+
+              {/* TAB 16: PRIVACY & TRUST CENTER */}
+              {activeTab === 'trust' && (
+                <div className="space-y-6 flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-cyan-400" />
+                        <span>Privacy & Trust Center</span>
+                      </h2>
+                      <p className="text-xs text-gray-400">
+                        Auditable data flows, on-device AES-256 encryption, zero-knowledge sync, and verified compliance guarantees.
+                      </p>
+                    </div>
+                  </div>
+                  <SecurityPrivacyDashboard userId={session.user?.uid || 'guest_user'} />
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
         </section>
-      </main>
 
-      {/* APPLICATION FOOTER — SINGLE GLOBAL SOVEREIGNTY ATTRIBUTION */}
-      <footer className="border-t border-gray-800/60 py-6 px-4 sm:px-8 bg-[#070b14] text-xs w-full max-w-full">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
-          <div className="space-y-1">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <LogEasyLogo variant="icon" size="xs" />
-              <span className="font-bold text-gray-200 tracking-tight text-sm">LogEasy</span>
-              <span className="text-gray-600 hidden sm:inline">·</span>
-              <span className="text-xs text-gray-400 font-normal">Personal Human Intelligence Operating System</span>
+        {/* APPLICATION FOOTER — SINGLE GLOBAL SOVEREIGNTY ATTRIBUTION */}
+        <footer className="border-t border-gray-800/60 pt-6 pb-24 lg:pb-6 px-4 sm:px-8 bg-[#070b14] text-xs w-full max-w-full mt-auto">
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+            <div className="space-y-1">
+              <div className="flex items-center justify-center md:justify-start gap-2">
+                <LogEasyLogo variant="icon" size="xs" />
+                <span className="font-bold text-gray-200 tracking-tight text-sm">LogEasy</span>
+                <span className="text-gray-600 hidden sm:inline">·</span>
+                <span className="text-xs text-gray-400 font-normal">Personal Human Intelligence Operating System</span>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Your life remembered with care. Private. Permanent. Warm. Intelligent.
+              </p>
             </div>
-            <p className="text-[11px] text-gray-400">
-              Your life remembered with care. Private. Permanent. Warm. Intelligent.
-            </p>
+            <div className="text-[11px] text-gray-400 border-t border-gray-800/60 md:border-0 pt-2.5 md:pt-0">
+              Developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
+            </div>
           </div>
-          <div className="text-[11px] text-gray-400 border-t border-gray-800/60 md:border-0 pt-2.5 md:pt-0">
-            Developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
+    </main>
 
       {/* RESPONSIVE BOTTOM NAVIGATION BAR (MOBILE/TABLET ONLY) */}
       <nav 

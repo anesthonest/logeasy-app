@@ -310,8 +310,8 @@ export default function PublicLandingPage({ onEnterApp, onLaunchDemo }: PublicLa
         </div>
       </section>
 
-      {/* 6. FOOTER */}
-      <footer className="mt-auto border-t border-gray-800/80 px-6 py-8 text-center text-xs text-gray-400 space-y-2.5">
+      {/* 6. LANDING QUICK LINKS BAR */}
+      <div className="mt-auto border-t border-gray-800/80 px-6 py-6 text-center text-xs text-gray-400">
         <div className="flex items-center justify-center gap-4 text-xs font-medium text-gray-400 flex-wrap">
           <button onClick={handleOpenVault} className="hover:text-cyan-400 cursor-pointer">Launch App</button>
           <span>•</span>
@@ -321,17 +321,7 @@ export default function PublicLandingPage({ onEnterApp, onLaunchDemo }: PublicLa
           <span>•</span>
           <span>GDPR & CCPA Native</span>
         </div>
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <LogEasyLogo variant="icon" size="xs" />
-          <span className="font-bold text-gray-200 tracking-tight text-sm">LogEasy</span>
-        </div>
-        <p className="text-[11px] text-gray-400">
-          Your life remembered with care. Private. Permanent. Warm. Intelligent.
-        </p>
-        <p className="text-[11px] text-gray-400">
-          Developed by <strong className="text-gray-300 font-semibold">VINEXSAH TECHNOLOGIES</strong>. All rights reserved.
-        </p>
-      </footer>
+      </div>
     </div>
   );
 }

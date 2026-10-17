@@ -306,7 +306,7 @@ class SubscriptionService {
     return JSON.parse(raw);
   }
 
-  private async addTransaction(userId: string, tx: BillingTransaction) {
+  public async addTransaction(userId: string, tx: BillingTransaction) {
     const list = await this.getTransactions(userId);
     list.unshift(tx);
     localStorage.setItem(`billing_history_${userId}`, JSON.stringify(list));

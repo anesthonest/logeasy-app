@@ -415,6 +415,18 @@ class LocalDatabase {
     });
   }
 
+  public async getEntry(id: string): Promise<LocalJournalEntry | null> {
+    return this.getJournalEntry(id);
+  }
+
+  public async updateEntry(entry: LocalJournalEntry): Promise<void> {
+    return this.saveJournalEntry(entry);
+  }
+
+  public async deleteEntry(id: string): Promise<void> {
+    return this.deleteJournalEntry(id);
+  }
+
   public async deleteJournalEntry(id: string): Promise<void> {
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
@@ -488,6 +500,10 @@ class LocalDatabase {
         reject(request.error);
       };
     });
+  }
+
+  public async removeSyncQueueItem(id: string): Promise<void> {
+    return this.removeFromSyncQueue(id);
   }
 
   // --- APP PREFERENCES OPERATIONS ---

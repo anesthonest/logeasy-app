@@ -55,7 +55,7 @@ export interface CheckoutSession {
   userId: string;
   planId: SubscriptionPlanId;
   amount: number;
-  currency: 'USD';
+  currency: 'USD' | string;
   provider: PaymentProvider;
   status: PaymentStatus;
   idempotencyKey: string;

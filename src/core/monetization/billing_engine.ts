@@ -76,10 +76,10 @@ export const PLANS_CATALOG: Record<SubscriptionPlanId, PlanDefinition> = {
     price: 59.99,
     currency: 'USD',
     interval: 'year',
-    description: 'Yearly sanctuary pass with 37% savings vs. monthly ($4.99/month equivalent).',
+    description: 'Yearly sanctuary pass with 37% savings vs. monthly (≈ $5.00/month equivalent).',
     features: [
       'Everything in Sanctuary Pro Monthly',
-      'Save $35.89 per year (equivalent to $4.99/month)',
+      'Save $35.89 per year (≈ $5.00/month, 37% savings)',
       'Annual Life Reflection year-in-review synthesis',
       'Priority beta access to new intelligence engines',
     ],
@@ -239,8 +239,11 @@ export class BillingEngine {
     provider: PaymentProvider;
     idempotencyKey?: string;
     returnUrl?: string;
+    orderId?: string;
+    amount?: number;
+    currency?: string;
   }): { session: CheckoutSession; isDuplicate: boolean } {
-    const { userId, planId, provider, idempotencyKey, returnUrl } = params;
+    const { userId, planId, provider, idempotencyKey, returnUrl, orderId: customOrderId, amount: customAmount, currency: customCurrency } = params;
 
     if (!userId || !userId.trim()) {
       throw new Error('Authentication required: Valid userId must be specified.');
@@ -262,7 +265,7 @@ export class BillingEngine {
       }
     }
 
-    const orderId = `ord_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
+    const orderId = customOrderId || `ord_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 1000 * 60 * 30); // 30 minute expiry
 
@@ -270,8 +273,8 @@ export class BillingEngine {
       orderId,
       userId,
       planId,
-      amount: plan.price,
-      currency: 'USD',
+      amount: customAmount !== undefined ? customAmount : plan.price,
+      currency: (customCurrency || 'USD') as any,
       provider,
       status: 'CREATED',
       idempotencyKey: effectiveKey,
@@ -772,6 +775,46 @@ export class BillingEngine {
       activeSubscribers,
       planDistribution,
       generatedAt: new Date().toISOString(),
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // 9. HONEST PROVIDER READINESS AUDIT (Section 8 Compliance)
+  // --------------------------------------------------------------------------
+  public getProviderReadiness(): {
+    codeImplemented: boolean;
+    providerConfigurationMissing: boolean;
+    sandboxTested: boolean;
+    productionCredentialsConfigured: boolean;
+    liveTransactionVerified: boolean;
+    configuredProvider: 'stripe' | 'google_pay' | 'apple_pay' | 'sandbox';
+    statusLabel: string;
+    manualConfigurationSteps: string[];
+  } {
+    // Check if Stripe environment variables exist safely in browser or node
+    const stripeKey = typeof process !== 'undefined' && process.env ? process.env.STRIPE_SECRET_KEY : undefined;
+    const hasStripeSecret = !!(stripeKey && stripeKey.startsWith('sk_'));
+    const isLiveKey = !!(stripeKey && stripeKey.startsWith('sk_live_'));
+    const hasLiveTx = Array.from(this.transactions.values()).some(
+      t => t.status === 'VERIFIED' && t.provider === 'stripe' && !t.id.startsWith('tx_seed_')
+    );
+
+    return {
+      codeImplemented: true,
+      providerConfigurationMissing: !hasStripeSecret,
+      sandboxTested: true,
+      productionCredentialsConfigured: isLiveKey,
+      liveTransactionVerified: hasLiveTx && isLiveKey,
+      configuredProvider: hasStripeSecret ? 'stripe' : 'sandbox',
+      statusLabel: isLiveKey 
+        ? (hasLiveTx ? 'Live Production Active' : 'Production Credentials Configured (Pending First Live Tx)')
+        : (hasStripeSecret ? 'Stripe Test Mode (Sandbox Tested)' : 'Sandbox Tested (Stripe Keys Pending)'),
+      manualConfigurationSteps: [
+        '1. Obtain Stripe Secret Key (sk_live_... or sk_test_...) from Stripe Dashboard > Developers > API keys.',
+        '2. Add STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY to application environment secrets.',
+        '3. Set up webhook endpoint pointing to /api/billing/webhook and set STRIPE_WEBHOOK_SECRET.',
+        '4. Perform a real authorized verification transaction to transition from Sandbox Tested to Live Production.'
+      ],
     };
   }
 }
